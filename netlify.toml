@@ -10,6 +10,9 @@
   NODE_VERSION = "24"
   # Site e API no mesmo endereço
   VITE_API_URL = "/api"
+  # Variáveis públicas (endereços e fuso), não segredos: o scanner do Netlify
+  # bloqueava o build por achar esses valores no README e no código
+  SECRETS_SCAN_OMIT_KEYS = "TIMEZONE,FRONTEND_URL,GOOGLE_REDIRECT_URI"
 
 [functions]
   node_bundler = "esbuild"
