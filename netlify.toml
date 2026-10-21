@@ -1,0 +1,27 @@
+# Deploy no Netlify: frontend estático + backend como função serverless.
+# Variáveis secretas (Supabase, Google, JWT...) ficam no painel do Netlify, nunca aqui.
+
+[build]
+  command = "npm ci --prefix backend && npm ci --prefix frontend && npm run build-only --prefix frontend"
+  publish = "frontend/dist"
+  functions = "backend/netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "24"
+  # Site e API no mesmo endereço
+  VITE_API_URL = "/api"
+
+[functions]
+  node_bundler = "esbuild"
+
+# API -> função
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Rotas do Vue Router (ex.: /dashboard, /privacidade) abrem o index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -6,6 +6,8 @@ import Agendamentos from '../views/Agendamentos.vue'
 import ClientLogin from '../components/ClientLogin.vue'
 import Servicos from '../views/Servicos.vue'
 import ServicosCategoria from '../views/ServicosCategoria.vue'
+import Privacidade from '../views/Privacidade.vue'
+import Termos from '../views/Termos.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -38,12 +40,15 @@ const routes = [
     component: AdminDashboard,
     meta: { requiresAdmin: true },
   },
+  { path: '/privacidade', name: 'Privacidade', component: Privacidade },
+  { path: '/termos', name: 'Termos', component: Termos },
   { path: '/clientes', redirect: '/dashboard' },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior: () => ({ top: 0 }),
   routes,
 })
 

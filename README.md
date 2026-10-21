@@ -67,13 +67,15 @@ O Studio Dantas recebia os pedidos de horário por mensagem e controlava a agend
 StudioDantas/
 ├── backend/
 │   ├── src/
-│   │   ├── app.js            # ponto de entrada da API
+│   │   ├── api.js            # monta a API (rotas e middlewares)
+│   │   ├── app.js            # servidor local (porta 3000)
 │   │   ├── config/           # cliente do Supabase
 │   │   ├── controllers/      # regras de clientes, serviços e agendamentos
 │   │   ├── middleware/       # autenticação (JWT, papéis, OAuth Google)
 │   │   ├── routes/           # rotas da API
 │   │   ├── services/         # cálculo de horários disponíveis
 │   │   └── googleCalendar.js # integração com o Google Calendar
+│   ├── netlify/functions/    # a mesma API como função serverless
 │   ├── supabase/             # scripts SQL (rodar em ordem)
 │   └── .env.example
 ├── frontend/
@@ -85,7 +87,8 @@ StudioDantas/
 │       ├── config/           # contatos do salão
 │       ├── router/
 │       ├── services/         # cliente HTTP (Axios)
-│       └── views/            # páginas
+│       └── views/            # páginas (inclui privacidade e termos)
+├── netlify.toml              # configuração de deploy
 └── prints/                   # capturas e diagrama do banco
 ```
 
@@ -147,6 +150,19 @@ O site abre em `http://localhost:5173`. Para apontar para outra API, defina `VIT
 ### 4. Primeiro acesso da proprietária
 
 Acesse `http://localhost:5173/admin` e entre com a conta Google de `ADMIN_EMAIL`. Nesse primeiro login, o sistema salva a autorização da agenda no banco. A partir daí, os agendamentos das clientes são criados automaticamente no Google Calendar.
+
+## Deploy (Netlify)
+
+O site e a API são publicados juntos no [Netlify](https://www.netlify.com/), no plano gratuito. O frontend vira um site estático, e o backend roda como função serverless no mesmo endereço, em `/api/*`. Toda a configuração está em [`netlify.toml`](netlify.toml).
+
+1. No Netlify, escolha **Add new project → Import an existing project → GitHub** e selecione este repositório. O Netlify lê os campos de build do `netlify.toml`.
+2. Em **Project configuration → Environment variables**, cadastre as mesmas variáveis do `backend/.env`, ajustando:
+   - `FRONTEND_URL` = `https://<seu-site>.netlify.app`
+   - `GOOGLE_REDIRECT_URI` = `https://<seu-site>.netlify.app/api/auth/google/callback`
+3. No Google Cloud, adicione essa mesma URL de callback em **Credenciais → URIs de redirecionamento autorizados**.
+4. Clique em **Deploy**. A partir daí, cada `git push` na branch `main` publica uma nova versão.
+
+As páginas [`/privacidade`](frontend/src/views/Privacidade.vue) e [`/termos`](frontend/src/views/Termos.vue) atendem à tela de consentimento OAuth do Google e à LGPD.
 
 ## Principais rotas da API
 
