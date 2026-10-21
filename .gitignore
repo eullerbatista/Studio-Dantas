@@ -1,0 +1,17 @@
+# Dependências e builds
+node_modules/
+dist/
+*.tsbuildinfo
+*.log
+
+# Segredos (copie backend/.env.example para backend/.env)
+.env
+.env.*
+!.env.example
+
+# Backups automáticos do Inkscape
+*.svg.*.svg
+
+# Sistema/editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,60 @@
+/* Paleta e tipografia do salão */
+:root {
+  --dourado: #c9a227;
+  --dourado-escuro: #a8841c;
+  --dourado-claro: #f6efdc;
+  --roxo: #6a1b9a;
+  --texto: #2e2630;
+  --texto-suave: #7b6f7e;
+  --fundo: #fbf8f4;
+  --branco: #ffffff;
+  --borda: #ece4da;
+  --sombra: 0 6px 24px rgba(74, 52, 38, 0.08);
+  --raio: 16px;
+  --fonte-titulo: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --fonte-texto: 'Montserrat', 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* Base global: caixas com padding/borda dentro da largura e nada maior que a tela */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-text-size-adjust: 100%;
+  font-family: var(--fonte-texto);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--texto);
+  background: var(--fundo);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--texto);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+a {
+  color: var(--roxo);
+}
+
+img {
+  max-width: 100%;
+}
