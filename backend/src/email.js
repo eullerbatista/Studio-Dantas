@@ -1,4 +1,4 @@
-import { gmail } from "./googleCalendar.js"
+import { gmail, loadStoredRefreshToken } from "./googleCalendar.js"
 
 // Cabeçalho com acentos precisa ser codificado (RFC 2047)
 function cabecalhoUtf8(texto) {
@@ -32,6 +32,10 @@ export async function enviarEmail({ para, assunto, texto, html }) {
     Buffer.from(html, "utf8").toString("base64"),
     `--${limite}--`,
   ].join("\r\n")
+
+  // No Netlify cada instância lê a autorização só ao iniciar: relê do banco para
+  // usar a do último login da admin (que pode ter acabado de conceder o gmail.send)
+  await loadStoredRefreshToken()
 
   await gmail.users.messages.send({
     userId: "me",
