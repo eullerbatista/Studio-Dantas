@@ -12,7 +12,7 @@ export function createOAuthClient() {
   )
 }
 
-// Cliente único usado pelo servidor para acessar a agenda da proprietária
+// Cliente único usado pelo servidor para acessar a agenda e o Gmail da proprietária
 const calendarAuth = createOAuthClient()
 
 if (process.env.GOOGLE_REFRESH_TOKEN) {
@@ -20,6 +20,7 @@ if (process.env.GOOGLE_REFRESH_TOKEN) {
 }
 
 export const calendar = google.calendar({ version: "v3", auth: calendarAuth })
+export const gmail = google.gmail({ version: "v1", auth: calendarAuth })
 
 export function setCalendarRefreshToken(refreshToken) {
   calendarAuth.setCredentials({ refresh_token: refreshToken })

@@ -24,6 +24,8 @@ const routes = [
         meta: { requiresClient: true },
     },
     { path: '/login', name: 'ClientLogin', component: ClientLogin },
+    // Link do e-mail de "esqueci minha senha" (mesma tela de login, na etapa de nova senha)
+    { path: '/redefinir-senha', name: 'RedefinirSenha', component: ClientLogin },
     { path: '/admin', name: 'AdminLogin', component: AdminLogin },
     { path: '/admin/callback', name: 'AdminCallback', component: AdminCallback },
     {

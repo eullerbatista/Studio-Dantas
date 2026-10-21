@@ -15,14 +15,17 @@
 
     <h3>1. Dados que coletamos</h3>
     <ul>
-      <li><strong>Clientes:</strong> nome e número de telefone, informados no primeiro acesso.</li>
+      <li>
+        <strong>Clientes:</strong> nome, número de telefone e e-mail, informados no primeiro acesso, e
+        a senha, guardada apenas de forma criptografada (nem o salão consegue lê-la).
+      </li>
       <li>
         <strong>Agendamentos:</strong> serviço escolhido, data e horário, observações que você escrever,
         situação (pendente, confirmado ou cancelado) e valor do serviço na data da marcação.
       </li>
       <li>
         <strong>Proprietária do salão:</strong> e-mail da conta Google usada para entrar no painel
-        administrativo e a autorização de acesso ao Google Agenda.
+        administrativo e a autorização de acesso ao Google Agenda e ao envio de e-mails pelo Gmail.
       </li>
       <li>
         <strong>No seu navegador:</strong> guardamos apenas um código de sessão para manter você
@@ -33,6 +36,7 @@
     <h3>2. Para que usamos os dados</h3>
     <ul>
       <li>Identificar você e mostrar os seus agendamentos;</li>
+      <li>Enviar o link para criar uma nova senha quando você pedir em "Esqueci minha senha";</li>
       <li>Reservar o horário escolhido e evitar conflitos na agenda;</li>
       <li>Permitir que o salão confirme, remarque ou cancele o atendimento e entre em contato com você;</li>
       <li>Gerar relatórios internos do salão, como quantidade de atendimentos e faturamento.</li>
@@ -51,6 +55,7 @@
         <strong>Google Agenda</strong> – cada agendamento vira um evento na agenda da proprietária,
         com seu nome, telefone, serviço e observações;
       </li>
+      <li><strong>Gmail</strong> – envio do e-mail de redefinição de senha, a partir da conta do salão;</li>
       <li><strong>Netlify</strong> – hospedagem do site.</li>
     </ul>
 
@@ -58,7 +63,8 @@
     <p>
       O acesso ao Google é usado apenas pela proprietária do salão: o e-mail confirma que só ela entra
       no painel, e a permissão do Google Agenda serve exclusivamente para criar, atualizar e remover os
-      eventos dos agendamentos. O uso e a transferência de informações recebidas das APIs do Google
+      eventos dos agendamentos. A permissão do Gmail é usada somente para enviar às clientes o e-mail
+      de redefinição de senha; o site não lê nem guarda as mensagens da conta. O uso e a transferência de informações recebidas das APIs do Google
       seguem a
       <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">
         Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso

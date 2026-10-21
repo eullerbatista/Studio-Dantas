@@ -12,7 +12,8 @@ export async function criarCliente(req, res) {
 }
 
 export async function listarClientes(req, res) {
-  const { data, error } = await supabase.from("clientes").select("*")
+  // Nunca "*": a tabela guarda o hash da senha
+  const { data, error } = await supabase.from("clientes").select("id, nome, telefone, email")
   if (error) return res.status(400).json({ error: error.message })
   res.json(data)
 }

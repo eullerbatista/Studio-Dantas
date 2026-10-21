@@ -1,26 +1,42 @@
 <template>
   <div class="login">
-    <h2>{{ precisaRegistro ? 'Primeiro acesso' : 'Login do Cliente' }}</h2>
+    <h2>{{ titulos[etapa] }}</h2>
 
-    <form v-if="!precisaRegistro" @submit.prevent="entrar">
+    <!-- 1) Telefone: o backend diz se falta cadastro, criar senha ou digitar a senha -->
+    <form v-if="etapa === 'telefone'" @submit.prevent="continuar">
       <input
         v-model="telefone"
         type="tel"
         inputmode="numeric"
-        autocomplete="tel"
+        autocomplete="username"
         placeholder="Telefone com DDD"
         required
         @input="telefone = mascararTelefone(telefone)"
       />
-      <button type="submit" :disabled="enviando">Entrar</button>
+      <button type="submit" :disabled="enviando">Continuar</button>
     </form>
 
-    <!-- Primeira vez deste telefone: pede nome e confirmação -->
-    <form v-else @submit.prevent="registrar">
-      <p class="info">
-        Não encontramos cadastro para <strong>{{ telefone }}</strong>. Informe seu nome e confirme o
-        telefone.
-      </p>
+    <!-- 2) Senha -->
+    <form v-else-if="etapa === 'senha'" @submit.prevent="entrar">
+      <!-- Campo de usuário para o navegador salvar telefone + senha juntos -->
+      <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
+      <input
+        v-model="senha"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Sua senha"
+        required
+        autofocus
+      />
+      <button type="submit" :disabled="enviando">Entrar</button>
+      <button type="button" class="voltar" @click="irPara('esqueci')">Esqueci minha senha</button>
+      <button type="button" class="voltar" @click="recomecar">Usar outro telefone</button>
+    </form>
+
+    <!-- 3) Primeira vez deste telefone: cadastro completo -->
+    <form v-else-if="etapa === 'cadastro'" @submit.prevent="registrar">
+      <p class="info">Não encontramos cadastro para este telefone. Preencha seus dados para criar sua conta.</p>
+      <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
       <input v-model="nome" type="text" autocomplete="name" placeholder="Seu nome" required />
       <input
         v-model="telefoneConfirmacao"
@@ -31,8 +47,84 @@
         @input="telefoneConfirmacao = mascararTelefone(telefoneConfirmacao)"
         @paste.prevent
       />
+      <input v-model="email" type="email" autocomplete="email" placeholder="Seu e-mail" required />
+      <input
+        v-model="senha"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Crie uma senha (mín. 8 caracteres)"
+        minlength="8"
+        required
+      />
+      <input
+        v-model="senhaConfirmacao"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Confirme a senha"
+        required
+      />
       <button type="submit" :disabled="enviando">Cadastrar</button>
-      <button type="button" class="voltar" @click="voltar">Usar outro telefone</button>
+      <button type="button" class="voltar" @click="recomecar">Usar outro telefone</button>
+    </form>
+
+    <!-- 4) Cliente cadastrada antes das senhas: cria a senha agora -->
+    <form v-else-if="etapa === 'criarSenha'" @submit.prevent="criarSenha">
+      <p class="info">
+        Para proteger seus agendamentos, o acesso agora é feito com senha. Informe seu e-mail (usado
+        caso você esqueça a senha) e crie sua senha.
+      </p>
+      <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
+      <input v-model="email" type="email" autocomplete="email" placeholder="Seu e-mail" required />
+      <input
+        v-model="senha"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Crie uma senha (mín. 8 caracteres)"
+        minlength="8"
+        required
+      />
+      <input
+        v-model="senhaConfirmacao"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Confirme a senha"
+        required
+      />
+      <button type="submit" :disabled="enviando">Salvar e entrar</button>
+      <button type="button" class="voltar" @click="recomecar">Usar outro telefone</button>
+    </form>
+
+    <!-- 5) Esqueci minha senha -->
+    <form v-else-if="etapa === 'esqueci'" @submit.prevent="pedirRedefinicao">
+      <template v-if="!mensagem">
+        <p class="info">Informe o e-mail da sua conta. Enviaremos um link para criar uma nova senha.</p>
+        <input v-model="email" type="email" autocomplete="email" placeholder="Seu e-mail" required />
+        <button type="submit" :disabled="enviando">Enviar link</button>
+      </template>
+      <p v-else class="sucesso">{{ mensagem }}</p>
+      <button type="button" class="voltar" @click="recomecar">Voltar para o login</button>
+    </form>
+
+    <!-- 6) Link do e-mail (/redefinir-senha?token=...) -->
+    <form v-else-if="etapa === 'redefinir'" @submit.prevent="redefinir">
+      <input
+        v-model="senha"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Nova senha (mín. 8 caracteres)"
+        minlength="8"
+        required
+        autofocus
+      />
+      <input
+        v-model="senhaConfirmacao"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Confirme a nova senha"
+        required
+      />
+      <button type="submit" :disabled="enviando">Salvar nova senha</button>
+      <button type="button" class="voltar" @click="recomecar">Voltar para o login</button>
     </form>
 
     <p v-if="erro" class="erro">{{ erro }}</p>
@@ -46,15 +138,49 @@ import api, { mensagemDeErro } from '../services/api'
 import { setSession } from '../composables/useAuth'
 import { mascararTelefone } from '../utils/telefone'
 
+type Etapa = 'telefone' | 'senha' | 'cadastro' | 'criarSenha' | 'esqueci' | 'redefinir'
+
+const titulos: Record<Etapa, string> = {
+  telefone: 'Login do Cliente',
+  senha: 'Login do Cliente',
+  cadastro: 'Primeiro acesso',
+  criarSenha: 'Crie sua senha',
+  esqueci: 'Esqueci minha senha',
+  redefinir: 'Nova senha',
+}
+
 const route = useRoute()
 const router = useRouter()
 
+const tokenRedefinicao = typeof route.query.token === 'string' ? route.query.token : ''
+// Tira o token da barra de endereço e do histórico depois de lido
+if (tokenRedefinicao) router.replace({ name: 'RedefinirSenha' })
+
+const etapa = ref<Etapa>(route.name === 'RedefinirSenha' && tokenRedefinicao ? 'redefinir' : 'telefone')
 const telefone = ref('')
 const telefoneConfirmacao = ref('')
 const nome = ref('')
-const precisaRegistro = ref(false)
+const email = ref('')
+const senha = ref('')
+const senhaConfirmacao = ref('')
 const enviando = ref(false)
 const erro = ref('')
+const mensagem = ref('')
+
+function irPara(proxima: Etapa) {
+  etapa.value = proxima
+  senha.value = ''
+  senhaConfirmacao.value = ''
+  erro.value = ''
+  mensagem.value = ''
+}
+
+function recomecar() {
+  irPara('telefone')
+  telefoneConfirmacao.value = ''
+  nome.value = ''
+  if (route.name === 'RedefinirSenha') router.replace({ name: 'ClientLogin' })
+}
 
 function concluirLogin(data: any) {
   setSession(data.token, 'client', data.client)
@@ -62,50 +188,99 @@ function concluirLogin(data: any) {
   router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/servicos')
 }
 
-async function entrar() {
+function senhasConferem() {
+  if (senha.value.length < 8) {
+    erro.value = 'A senha precisa ter pelo menos 8 caracteres.'
+    return false
+  }
+  if (senha.value !== senhaConfirmacao.value) {
+    erro.value = 'As senhas informadas não conferem.'
+    return false
+  }
+  return true
+}
+
+// Envia a requisição cuidando do estado "enviando" e da mensagem de erro
+async function enviar(acao: () => Promise<void>, erroPadrao: string) {
   erro.value = ''
   enviando.value = true
   try {
-    const res = await api.post('/auth/client/login', { telefone: telefone.value })
-    if (res.data.needsRegistration) {
-      precisaRegistro.value = true
-      return
-    }
-    concluirLogin(res.data)
+    await acao()
   } catch (err) {
-    erro.value = mensagemDeErro(err, 'Erro ao realizar login. Tente novamente.')
+    erro.value = mensagemDeErro(err, erroPadrao)
   } finally {
     enviando.value = false
   }
 }
 
-async function registrar() {
+function continuar() {
+  return enviar(async () => {
+    const res = await api.post('/auth/client/login', { telefone: telefone.value })
+    if (res.data.needsRegistration) irPara('cadastro')
+    else if (res.data.needsPasswordSetup) irPara('criarSenha')
+    else irPara('senha')
+  }, 'Erro ao realizar login. Tente novamente.')
+}
+
+function entrar() {
+  return enviar(async () => {
+    const res = await api.post('/auth/client/login', { telefone: telefone.value, senha: senha.value })
+    concluirLogin(res.data)
+  }, 'Erro ao realizar login. Tente novamente.')
+}
+
+function registrar() {
   erro.value = ''
   if (telefone.value.replace(/\D/g, '') !== telefoneConfirmacao.value.replace(/\D/g, '')) {
     erro.value = 'Os telefones informados não conferem.'
     return
   }
+  if (!senhasConferem()) return
 
-  enviando.value = true
-  try {
+  return enviar(async () => {
     const res = await api.post('/auth/client/register', {
       telefone: telefone.value,
       telefoneConfirmacao: telefoneConfirmacao.value,
       nome: nome.value,
+      email: email.value,
+      senha: senha.value,
     })
     concluirLogin(res.data)
-  } catch (err) {
-    erro.value = mensagemDeErro(err, 'Erro ao realizar cadastro. Tente novamente.')
-  } finally {
-    enviando.value = false
-  }
+  }, 'Erro ao realizar cadastro. Tente novamente.')
 }
 
-function voltar() {
-  precisaRegistro.value = false
-  telefoneConfirmacao.value = ''
-  nome.value = ''
+function criarSenha() {
   erro.value = ''
+  if (!senhasConferem()) return
+
+  return enviar(async () => {
+    const res = await api.post('/auth/client/setup-password', {
+      telefone: telefone.value,
+      email: email.value,
+      senha: senha.value,
+    })
+    concluirLogin(res.data)
+  }, 'Erro ao criar a senha. Tente novamente.')
+}
+
+function pedirRedefinicao() {
+  return enviar(async () => {
+    const res = await api.post('/auth/client/forgot-password', { email: email.value })
+    mensagem.value = res.data.message
+  }, 'Erro ao enviar o link. Tente novamente.')
+}
+
+function redefinir() {
+  erro.value = ''
+  if (!senhasConferem()) return
+
+  return enviar(async () => {
+    const res = await api.post('/auth/client/reset-password', {
+      token: tokenRedefinicao,
+      senha: senha.value,
+    })
+    concluirLogin(res.data)
+  }, 'Erro ao salvar a nova senha. Tente novamente.')
 }
 </script>
 
@@ -141,6 +316,10 @@ function voltar() {
   border-color: var(--dourado);
   background: var(--branco);
 }
+.login input.somente-leitura {
+  color: var(--texto-suave);
+  cursor: default;
+}
 .login button {
   display: block;
   width: 100%;
@@ -175,6 +354,12 @@ function voltar() {
 .info {
   font-size: 0.9rem;
   color: var(--texto-suave);
+  margin: 0 0 1rem;
+}
+.sucesso {
+  font-size: 0.95rem;
+  color: var(--texto);
+  text-align: center;
   margin: 0 0 1rem;
 }
 .erro {

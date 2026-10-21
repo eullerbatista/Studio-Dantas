@@ -26,7 +26,8 @@ O Studio Dantas recebia os pedidos de horário por mensagem e controlava a agend
 
 ### Para as clientes
 - **Catálogo de serviços** por categoria: Mãos & Pés, Cabelos e Olhos & Sobrancelhas.
-- **Acesso pelo telefone:** a cliente informa o celular e, na primeira vez, o nome. Não há senha.
+- **Acesso com telefone e senha:** no primeiro acesso a cliente informa nome, e-mail e cria uma senha. A sessão fica salva no aparelho por 60 dias, e trocar a senha encerra as sessões abertas em outros aparelhos.
+- **Esqueci minha senha:** a cliente recebe por e-mail (enviado pelo Gmail da proprietária) um link válido por 1 hora para criar uma nova senha.
 - **Agendamento** com os horários realmente livres. O sistema considera o horário de funcionamento, o almoço, os dias de folga e a duração do serviço.
 - **Meus agendamentos:** consulta dos horários marcados e do status de cada um.
 - **Contato rápido** pelo menu: WhatsApp, Instagram e localização no Google Maps.
@@ -97,7 +98,7 @@ StudioDantas/
 ### Pré-requisitos
 - [Node.js](https://nodejs.org/) 22.18+ ou 24.12+
 - Um projeto no [Supabase](https://supabase.com/)
-- Um projeto no [Google Cloud](https://console.cloud.google.com/) com a **Google Calendar API** ativada e uma credencial **OAuth 2.0** do tipo "Aplicativo da Web"
+- Um projeto no [Google Cloud](https://console.cloud.google.com/) com a **Google Calendar API** e a **Gmail API** ativadas e uma credencial **OAuth 2.0** do tipo "Aplicativo da Web"
 
 ### 1. Banco de dados
 
@@ -108,6 +109,7 @@ O banco usa as tabelas `clientes`, `servicos`, `agendamentos` e `admins`. O diag
 | `backend/supabase/001_correcoes_agendamento.sql` | Fuso horário, índice de horário único, telefone normalizado e colunas de serviço |
 | `backend/supabase/002_seed_servicos.sql` | *(opcional)* Cadastra os serviços iniciais |
 | `backend/supabase/003_valor_agendamento.sql` | Grava o valor cobrado em cada agendamento |
+| `backend/supabase/004_senha_clientes.sql` | Senha e e-mail das clientes e links de redefinição de senha |
 
 ### 2. Backend
 
@@ -149,7 +151,7 @@ O site abre em `http://localhost:5173`. Para apontar para outra API, defina `VIT
 
 ### 4. Primeiro acesso da proprietária
 
-Acesse `http://localhost:5173/admin` e entre com a conta Google de `ADMIN_EMAIL`. Nesse primeiro login, o sistema salva a autorização da agenda no banco. A partir daí, os agendamentos das clientes são criados automaticamente no Google Calendar.
+Acesse `http://localhost:5173/admin` e entre com a conta Google de `ADMIN_EMAIL`. Nesse primeiro login, o sistema salva no banco a autorização da agenda e do Gmail (usado para enviar o e-mail de "esqueci minha senha"). A partir daí, os agendamentos das clientes são criados automaticamente no Google Calendar.
 
 ## Deploy (Netlify)
 
@@ -168,8 +170,11 @@ As páginas [`/privacidade`](frontend/src/views/Privacidade.vue) e [`/termos`](f
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/api/auth/client/login` | público | Login da cliente pelo telefone |
+| `POST` | `/api/auth/client/login` | público | Login da cliente por telefone e senha |
 | `POST` | `/api/auth/client/register` | público | Cadastro da cliente |
+| `POST` | `/api/auth/client/setup-password` | público | Cliente antiga cria a senha no primeiro login |
+| `POST` | `/api/auth/client/forgot-password` | público | Envia o link de redefinição de senha |
+| `POST` | `/api/auth/client/reset-password` | público | Nova senha pelo link do e-mail |
 | `GET` | `/api/auth/google` | público | Inicia o login da proprietária |
 | `GET` | `/api/servicos` | público | Serviços ativos |
 | `GET` | `/api/calendar/availability?date=AAAA-MM-DD&servico_id=` | público | Horários livres de um dia |

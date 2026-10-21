@@ -4,8 +4,13 @@ import {
   getAuthUrl,
   loginAdmin,
   loginClient,
+  normalizarEmail,
   normalizarTelefone,
   registerClient,
+  requestPasswordReset,
+  resetClientPassword,
+  setupClientPassword,
+  validarSenha,
 } from "../middleware/auth.js"
 
 const router = express.Router()
@@ -21,18 +26,19 @@ function responderErro(res, err, contexto) {
 }
 
 /**
- * Login de cliente via telefone
- * Endpoint: POST /api/auth/client/login  { telefone }
- * Resposta: { token, client } ou { needsRegistration: true }
+ * Login de cliente via telefone e senha
+ * Endpoint: POST /api/auth/client/login  { telefone, senha? }
+ * Resposta: { token, client } ou { needsRegistration | needsPasswordSetup | needsPassword: true }
  */
 router.post("/client/login", async (req, res) => {
   const telefone = normalizarTelefone(req.body?.telefone)
   if (!telefone) {
     return res.status(400).json({ error: "Informe um telefone válido com DDD" })
   }
+  const senha = typeof req.body?.senha === "string" ? req.body.senha : ""
 
   try {
-    res.json(await loginClient(telefone))
+    res.json(await loginClient(telefone, senha))
   } catch (err) {
     responderErro(res, err, "Erro no login do cliente:")
   }
@@ -40,12 +46,14 @@ router.post("/client/login", async (req, res) => {
 
 /**
  * Cadastro de cliente na primeira vez
- * Endpoint: POST /api/auth/client/register  { telefone, telefoneConfirmacao, nome }
+ * Endpoint: POST /api/auth/client/register  { telefone, telefoneConfirmacao, nome, email, senha }
  */
 router.post("/client/register", async (req, res) => {
   const telefone = normalizarTelefone(req.body?.telefone)
   const confirmacao = normalizarTelefone(req.body?.telefoneConfirmacao)
   const nome = String(req.body?.nome || "").trim()
+  const email = normalizarEmail(req.body?.email)
+  const erroSenha = validarSenha(req.body?.senha)
 
   if (!telefone) {
     return res.status(400).json({ error: "Informe um telefone válido com DDD" })
@@ -56,11 +64,84 @@ router.post("/client/register", async (req, res) => {
   if (nome.length < 2 || nome.length > 100) {
     return res.status(400).json({ error: "Informe seu nome" })
   }
+  if (!email) {
+    return res.status(400).json({ error: "Informe um e-mail válido" })
+  }
+  if (erroSenha) {
+    return res.status(400).json({ error: erroSenha })
+  }
 
   try {
-    res.status(201).json(await registerClient(telefone, nome))
+    res.status(201).json(await registerClient({ telefone, nome, email, senha: req.body.senha }))
   } catch (err) {
     responderErro(res, err, "Erro no cadastro do cliente:")
+  }
+})
+
+/**
+ * Cliente cadastrada antes das senhas cria a sua no primeiro login
+ * Endpoint: POST /api/auth/client/setup-password  { telefone, email, senha }
+ */
+router.post("/client/setup-password", async (req, res) => {
+  const telefone = normalizarTelefone(req.body?.telefone)
+  const email = normalizarEmail(req.body?.email)
+  const erroSenha = validarSenha(req.body?.senha)
+
+  if (!telefone) {
+    return res.status(400).json({ error: "Informe um telefone válido com DDD" })
+  }
+  if (!email) {
+    return res.status(400).json({ error: "Informe um e-mail válido" })
+  }
+  if (erroSenha) {
+    return res.status(400).json({ error: erroSenha })
+  }
+
+  try {
+    res.json(await setupClientPassword({ telefone, email, senha: req.body.senha }))
+  } catch (err) {
+    responderErro(res, err, "Erro ao criar senha do cliente:")
+  }
+})
+
+/**
+ * Esqueci minha senha: envia o link de redefinição para o e-mail cadastrado
+ * Endpoint: POST /api/auth/client/forgot-password  { email }
+ * Responde igual exista ou não o e-mail, para não revelar quem é cliente
+ */
+router.post("/client/forgot-password", async (req, res) => {
+  const email = normalizarEmail(req.body?.email)
+  if (!email) {
+    return res.status(400).json({ error: "Informe um e-mail válido" })
+  }
+
+  try {
+    await requestPasswordReset(email)
+  } catch (err) {
+    // Falha no envio não é exposta (revelaria que o e-mail existe)
+    console.error("Erro ao enviar redefinição de senha:", err)
+  }
+  res.json({ message: "Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha." })
+})
+
+/**
+ * Nova senha pelo link do e-mail
+ * Endpoint: POST /api/auth/client/reset-password  { token, senha }
+ * Resposta: { token, client } (já entra na conta)
+ */
+router.post("/client/reset-password", async (req, res) => {
+  const erroSenha = validarSenha(req.body?.senha)
+  if (!req.body?.token) {
+    return res.status(400).json({ error: "Link inválido" })
+  }
+  if (erroSenha) {
+    return res.status(400).json({ error: erroSenha })
+  }
+
+  try {
+    res.json(await resetClientPassword(req.body.token, req.body.senha))
+  } catch (err) {
+    responderErro(res, err, "Erro ao redefinir senha do cliente:")
   }
 })
 
