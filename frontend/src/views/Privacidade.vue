@@ -29,7 +29,7 @@
       </li>
       <li>
         <strong>No seu navegador:</strong> guardamos apenas um código de sessão para manter você
-        conectada. Não usamos cookies de rastreamento, ferramentas de análise ou publicidade.
+        conectada por até 60 dias. Não usamos cookies de rastreamento, ferramentas de análise ou publicidade.
       </li>
     </ul>
 
@@ -87,9 +87,11 @@
 
     <h3>7. Segurança</h3>
     <p>
-      O site usa conexão criptografada (HTTPS). O painel administrativo é restrito à conta Google da
-      proprietária, e as chaves de acesso ao banco de dados ficam apenas no servidor, nunca no
-      navegador.
+      O site usa conexão criptografada (HTTPS). O acesso das clientes é protegido por senha, guardada
+      apenas de forma criptografada; após várias tentativas erradas o acesso é bloqueado por alguns
+      minutos, e o link de "Esqueci minha senha" vale por 1 hora e só pode ser usado uma vez. O painel
+      administrativo é restrito à conta Google da proprietária, e as chaves de acesso ao banco de dados
+      ficam apenas no servidor, nunca no navegador.
     </p>
 
     <h3>8. Alterações</h3>

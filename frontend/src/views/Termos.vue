@@ -21,12 +21,19 @@
 
     <h3>2. Cadastro e acesso</h3>
     <ul>
-      <li>O acesso é feito pelo número de celular, sem senha. Informe um número que seja seu.</li>
       <li>
-        Quem souber o seu número consegue ver os seus agendamentos no site; por isso, use o sistema em
-        aparelhos de confiança e clique em <em>Sair</em> ao terminar.
+        O acesso é feito com o seu número de celular e uma senha criada por você. Informe um número e
+        um e-mail que sejam seus.
       </li>
-      <li>Mantenha seu nome e telefone corretos, para que o salão consiga falar com você.</li>
+      <li>
+        A senha é pessoal: não a compartilhe. Se esquecer, use <em>Esqueci minha senha</em> para
+        receber no seu e-mail um link para criar uma nova.
+      </li>
+      <li>
+        O site mantém você conectada no aparelho por até 60 dias. Em aparelhos compartilhados, clique
+        em <em>Sair</em> ao terminar. Ao trocar a senha, os acessos em outros aparelhos são encerrados.
+      </li>
+      <li>Mantenha seu nome, telefone e e-mail corretos, para que o salão consiga falar com você.</li>
     </ul>
 
     <h3>3. Agendamentos</h3>
@@ -47,8 +54,8 @@
 
     <h3>4. Uso adequado</h3>
     <p>
-      Não é permitido fazer agendamentos falsos, usar o telefone de outra pessoa ou tentar acessar
-      áreas restritas do sistema. O salão pode excluir cadastros e agendamentos que não respeitem estas
+      Não é permitido fazer agendamentos falsos, usar o telefone ou a conta de outra pessoa ou tentar
+      acessar áreas restritas do sistema. O salão pode excluir cadastros e agendamentos que não respeitem estas
       regras.
     </p>
 
