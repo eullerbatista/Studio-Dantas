@@ -30,7 +30,14 @@
           <tr v-for="ag in agendamentos" :key="ag.id" :class="{ pendente: ag.status !== 'confirmado' }">
             <td data-label="Cliente">{{ ag.clientes?.nome }}</td>
             <td data-label="Telefone">{{ formatarTelefone(ag.clientes?.telefone) }}</td>
-            <td data-label="Serviço">{{ ag.servicos?.nome }}</td>
+            <td data-label="Serviço">
+              <div class="servico-info">
+                {{ ag.servicos?.nome }}
+                <p v-if="ag.observacoes?.trim()" class="observacao">
+                  <span class="observacao-rotulo">Obs.:</span> {{ ag.observacoes }}
+                </p>
+              </div>
+            </td>
             <td data-label="Data">{{ formatDate(ag.data_hora) }}</td>
             <td data-label="Confirmado">
               <span v-if="ag.status === 'cancelado'">Cancelado</span>
@@ -410,6 +417,21 @@ tr.pendente td {
   color: var(--dourado-escuro);
   font-weight: 600;
 }
+.observacao {
+  margin: 0.3rem 0 0;
+  padding: 0.35rem 0.6rem;
+  max-width: 320px;
+  background: var(--dourado-claro);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  white-space: pre-line; /* mantém as quebras de linha digitadas pela cliente */
+  overflow-wrap: anywhere;
+}
+.observacao-rotulo {
+  font-weight: 600;
+  color: var(--dourado-escuro);
+}
 tr.desativado td {
   color: #999;
 }
@@ -482,6 +504,13 @@ tr.desativado td {
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--texto-suave);
+    text-align: left;
+  }
+  .servico-info {
+    text-align: right;
+  }
+  .observacao {
+    max-width: none;
     text-align: left;
   }
   td.acoes {
