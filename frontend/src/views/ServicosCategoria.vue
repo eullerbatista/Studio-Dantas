@@ -1,5 +1,6 @@
 <template>
   <div class="servicos">
+    <router-link to="/servicos" class="voltar">← Categorias</router-link>
     <h1>{{ tituloCategoria }}</h1>
 
     <p v-if="sucesso" class="sucesso">
@@ -37,9 +38,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AgendamentoModal from '@/components/AgendamentoModal.vue'
 import api, { mensagemDeErro } from '@/services/api'
+import { useAuth } from '@/composables/useAuth'
 
 interface Servico {
   id: number
@@ -76,6 +78,8 @@ function iconeDoServico(nome: string) {
 }
 
 const route = useRoute()
+const router = useRouter()
+const { isClient } = useAuth()
 const categoria = computed(() => route.params.categoria as string)
 
 const servicos = ref<Servico[]>([])
@@ -89,6 +93,7 @@ async function carregarServicos() {
   try {
     const res = await api.get('/servicos', { params: { categoria: categoria.value } })
     servicos.value = res.data
+    retomarAgendamento()
   } catch (err) {
     erro.value = mensagemDeErro(err, 'Erro ao carregar serviços')
   } finally {
@@ -115,9 +120,26 @@ const modalAberto = ref(false)
 const servicoSelecionado = ref<Servico | null>(null)
 
 function abrirAgendamento(servico: Servico) {
+  // Ver os serviços é livre; para agendar a cliente precisa entrar
+  if (!isClient.value) {
+    router.push({
+      name: 'ClientLogin',
+      query: { redirect: `${route.path}?agendar=${servico.id}` },
+    })
+    return
+  }
   sucesso.value = ''
   servicoSelecionado.value = servico
   modalAberto.value = true
+}
+
+// Voltou do login: abre o serviço que ela tinha escolhido
+function retomarAgendamento() {
+  const id = Number(route.query.agendar)
+  if (!id) return
+  router.replace({ query: {} })
+  const servico = servicos.value.find((s) => s.id === id)
+  if (servico && isClient.value) abrirAgendamento(servico)
 }
 
 function confirmarAgendamento(dados: { data: string; horario: string }) {
@@ -132,6 +154,22 @@ function confirmarAgendamento(dados: { data: string; horario: string }) {
   max-width: 1200px;
   margin: 0 auto;
   padding: 3rem 2rem;
+}
+
+.voltar {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.voltar:hover {
+  color: var(--dourado-escuro);
 }
 
 h1 {

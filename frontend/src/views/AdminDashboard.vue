@@ -15,6 +15,7 @@
     <!-- Agendamentos -->
     <div v-if="aba === 'agendamentos'">
       <h3>Lista de Agendamentos</h3>
+      <button class="btn-novo" @click="novoAgendamentoVisivel = true">+ Novo agendamento</button>
       <table>
         <thead>
           <tr>
@@ -132,6 +133,15 @@
       @confirmar="atualizarAgendamento"
     />
 
+    <NovoAgendamentoModal
+      v-if="novoAgendamentoVisivel"
+      :clientes="clientes"
+      :servicos="servicos"
+      @fechar="novoAgendamentoVisivel = false"
+      @cliente-criada="(c) => clientes.push(c)"
+      @salvo="agendamentoCriado"
+    />
+
     <ClienteModal
       v-if="clienteSelecionado"
       :cliente="clienteSelecionado"
@@ -156,6 +166,7 @@ import { ref, onMounted } from 'vue'
 import api, { mensagemDeErro } from '../services/api'
 import AgendamentoModal from '../components/AgendamentoModal.vue'
 import AnaliseDashboard from '../components/AnaliseDashboard.vue'
+import NovoAgendamentoModal from '../components/NovoAgendamentoModal.vue'
 import ServicoModal, { type Servico } from '../components/ServicoModal.vue'
 import ClienteModal, { type Cliente } from '../components/ClienteModal.vue'
 import { formatarTelefone } from '../utils/telefone'
@@ -222,6 +233,15 @@ function atualizarAgendamento(dados: { data: string; horario: string }) {
     await fetchAgendamentos()
     exibirMensagem('Agendamento atualizado com sucesso!')
   }, 'Erro ao atualizar agendamento')
+}
+
+// Agendamento feito pela proprietária (cliente pediu pessoalmente)
+const novoAgendamentoVisivel = ref(false)
+
+function agendamentoCriado() {
+  novoAgendamentoVisivel.value = false
+  exibirMensagem('Agendamento criado com sucesso!')
+  return executar(fetchAgendamentos, 'Erro ao carregar agendamentos')
 }
 
 const salvandoStatus = ref<number | null>(null)

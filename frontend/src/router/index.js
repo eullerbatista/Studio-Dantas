@@ -15,7 +15,6 @@ const routes = [
         path: '/servicos/:categoria',
         name: 'ServicosCategoria',
         component: ServicosCategoria,
-        meta: { requiresClient: true },
     },
     {
         path: '/agendamentos',
@@ -50,7 +49,7 @@ router.beforeEach((to) => {
     if (to.meta.requiresAdmin && (!token || role !== 'admin')) {
         return { name: 'AdminLogin' };
     }
-    // Cliente precisa informar o telefone antes de ver serviços e horários
+    // Serviços são abertos a todos; o login é pedido ao agendar ou ver os próprios agendamentos
     if (to.meta.requiresClient && (!token || role !== 'client')) {
         return { name: 'ClientLogin', query: { redirect: to.fullPath } };
     }

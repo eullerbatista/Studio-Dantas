@@ -72,7 +72,8 @@ export async function criarAgendamento(req, res) {
       cliente_id: cliente.id,
       servico_id: servico.id,
       data_hora: inicio.toISOString(),
-      status: "pendente", // a proprietária confirma pelo painel
+      // a proprietária confirma pelo painel; o que ela mesma marca já nasce confirmado
+      status: user.role === "admin" ? "confirmado" : "pendente",
       observacoes: observacoes || null,
       valor: servico.preco ?? null, // preço do dia, não muda se o serviço for reajustado
     }])

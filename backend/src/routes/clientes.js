@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  criarCliente,
   listarClientes,
   atualizarCliente,
   deletarCliente
@@ -8,7 +9,9 @@ import { checkRole } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Cadastro de cliente é feito pelo login (POST /api/auth/client/register)
+// Cliente se cadastra pelo login (POST /api/auth/client/register);
+// admin cadastra quem agendou pessoalmente
+router.post("/", checkRole("admin"), criarCliente);
 
 // Listar clientes -> apenas admin
 router.get("/", checkRole("admin"), listarClientes);
