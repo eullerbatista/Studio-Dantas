@@ -64,6 +64,7 @@
     <!-- Clientes -->
     <div v-if="aba === 'clientes'">
       <h3>Lista de Clientes</h3>
+      <button class="btn-novo" @click="editarCliente(null)">+ Nova cliente</button>
       <table>
         <thead>
           <tr>
@@ -143,9 +144,9 @@
     />
 
     <ClienteModal
-      v-if="clienteSelecionado"
+      v-if="clienteModalVisivel"
       :cliente="clienteSelecionado"
-      @fechar="clienteSelecionado = null"
+      @fechar="clienteModalVisivel = false"
       @salvo="clienteSalvo"
     />
 
@@ -271,16 +272,23 @@ function excluirAgendamento(id: number) {
   }, 'Erro ao excluir agendamento')
 }
 
+const clienteModalVisivel = ref(false)
 const clienteSelecionado = ref<Cliente | null>(null)
 
-function editarCliente(c: Cliente) {
+function editarCliente(c: Cliente | null) {
   clienteSelecionado.value = c
+  clienteModalVisivel.value = true
 }
 
 async function clienteSalvo(salvo: Cliente) {
+  clienteModalVisivel.value = false
   const i = clientes.value.findIndex((c) => c.id === salvo.id)
-  if (i >= 0) clientes.value[i] = salvo
-  clienteSelecionado.value = null
+  if (i < 0) {
+    clientes.value.push(salvo)
+    exibirMensagem('Cliente cadastrada com sucesso!')
+    return
+  }
+  clientes.value[i] = salvo
   exibirMensagem('Cliente atualizada com sucesso!')
   // A aba de agendamentos mostra nome e telefone da cliente
   await executar(fetchAgendamentos, 'Erro ao carregar agendamentos')

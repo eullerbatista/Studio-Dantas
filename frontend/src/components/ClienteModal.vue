@@ -1,7 +1,7 @@
 <template>
   <div class="modal-overlay">
     <form class="modal" @submit.prevent="salvar">
-      <h2>Editar cliente</h2>
+      <h2>{{ cliente ? 'Editar cliente' : 'Nova cliente' }}</h2>
 
       <label>
         Nome
@@ -19,7 +19,13 @@
         />
       </label>
 
-      <p class="aviso">A cliente passa a entrar com o novo telefone.</p>
+      <p class="aviso">
+        {{
+          cliente
+            ? 'A cliente passa a entrar com o novo telefone.'
+            : 'No primeiro acesso pelo site, ela entra com este telefone e cria a senha.'
+        }}
+      </p>
 
       <p v-if="erro" class="erro">{{ erro }}</p>
 
@@ -42,7 +48,8 @@ export interface Cliente {
   telefone: string
 }
 
-const props = defineProps<{ cliente: Cliente }>()
+// null: cadastro de cliente nova
+const props = defineProps<{ cliente: Cliente | null }>()
 
 const emit = defineEmits<{
   (e: 'fechar'): void
@@ -50,8 +57,8 @@ const emit = defineEmits<{
 }>()
 
 const form = reactive({
-  nome: props.cliente.nome ?? '',
-  telefone: formatarTelefone(props.cliente.telefone),
+  nome: props.cliente?.nome ?? '',
+  telefone: formatarTelefone(props.cliente?.telefone),
 })
 const enviando = ref(false)
 const erro = ref('')
@@ -60,7 +67,9 @@ async function salvar() {
   enviando.value = true
   erro.value = ''
   try {
-    const res = await api.put(`/clientes/${props.cliente.id}`, form)
+    const res = props.cliente
+      ? await api.put(`/clientes/${props.cliente.id}`, form)
+      : await api.post('/clientes', form)
     emit('salvo', res.data)
   } catch (err) {
     erro.value = mensagemDeErro(err, 'Erro ao salvar cliente')
