@@ -130,7 +130,7 @@ export function validarSenha(senha) {
 }
 
 // Hash no formato "scrypt$salt$hash" (scrypt já vem no Node, sem dependência nativa)
-async function gerarHashSenha(senha) {
+export async function gerarHashSenha(senha) {
   const salt = randomBytes(16)
   const hash = await scrypt(senha.normalize("NFKC"), salt, 64)
   return `scrypt$${salt.toString("base64")}$${hash.toString("base64")}`

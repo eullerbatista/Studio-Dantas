@@ -19,11 +19,31 @@
         />
       </label>
 
+      <p v-if="cliente" class="aviso">A cliente entra no site com este telefone.</p>
+
+      <label>
+        E-mail <span class="opcional">(opcional)</span>
+        <input v-model="form.email" type="email" maxlength="254" autocomplete="off" />
+      </label>
+
+      <label>
+        {{ cliente ? 'Nova senha' : 'Senha' }} <span class="opcional">(opcional)</span>
+        <input
+          v-model="form.senha"
+          type="text"
+          minlength="8"
+          maxlength="128"
+          autocomplete="off"
+          spellcheck="false"
+          :placeholder="cliente ? 'Deixe em branco para manter a atual' : 'Mínimo de 8 caracteres'"
+        />
+      </label>
+
       <p class="aviso">
         {{
           cliente
-            ? 'A cliente passa a entrar com o novo telefone.'
-            : 'No primeiro acesso pelo site, ela entra com este telefone e cria a senha.'
+            ? 'Com a senha nova, ela precisa entrar de novo nos aparelhos em que já estava logada.'
+            : 'Sem senha, no primeiro acesso pelo site ela entra com o telefone e cria a própria senha.'
         }}
       </p>
 
@@ -46,6 +66,7 @@ export interface Cliente {
   id: number
   nome: string
   telefone: string
+  email?: string | null
 }
 
 // null: cadastro de cliente nova
@@ -59,6 +80,8 @@ const emit = defineEmits<{
 const form = reactive({
   nome: props.cliente?.nome ?? '',
   telefone: formatarTelefone(props.cliente?.telefone),
+  email: props.cliente?.email ?? '',
+  senha: '',
 })
 const enviando = ref(false)
 const erro = ref('')
@@ -181,6 +204,11 @@ textarea:focus {
 textarea {
   min-height: 70px;
   resize: vertical;
+}
+
+.opcional {
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 .aviso {
