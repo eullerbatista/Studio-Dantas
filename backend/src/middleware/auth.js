@@ -18,6 +18,14 @@ function adminEmail() {
   return (process.env.ADMIN_EMAIL || "").trim().toLowerCase()
 }
 
+// Outras pessoas com acesso ao painel; a Agenda e os e-mails continuam na conta de ADMIN_EMAIL
+function adminsExtras() {
+  return (process.env.ADMIN_EMAILS_EXTRAS || "")
+    .split(",")
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 // Gera URL de login do Google (apenas para admin)
 export function getAuthUrl() {
   // "state" assinado protege o callback contra requisições forjadas
@@ -60,7 +68,7 @@ async function salvarRefreshToken(refreshToken) {
 
 /**
  * Troca o código do Google por tokens, confirma que quem entrou é a proprietária
- * (ADMIN_EMAIL) e devolve o JWT de admin.
+ * (ADMIN_EMAIL) ou uma admin extra (ADMIN_EMAILS_EXTRAS) e devolve o JWT de admin.
  */
 export async function loginAdmin(code, state) {
   try {
@@ -82,18 +90,21 @@ export async function loginAdmin(code, state) {
     audience: process.env.GOOGLE_CLIENT_ID,
   })
   const { email, email_verified } = ticket.getPayload()
+  const emailLogado = email.toLowerCase()
+  const proprietaria = emailLogado === adminEmail()
 
-  if (!email_verified || email.toLowerCase() !== adminEmail()) {
+  if (!email_verified || (!proprietaria && !adminsExtras().includes(emailLogado))) {
     throw new AuthError("Esta conta Google não tem acesso ao painel")
   }
 
-  if (tokens.refresh_token) {
+  // Só o token da proprietária é guardado: é a Agenda e o Gmail dela que o sistema usa
+  if (proprietaria && tokens.refresh_token) {
     setCalendarRefreshToken(tokens.refresh_token)
 
     await salvarRefreshToken(tokens.refresh_token)
   }
 
-  return jwt.sign({ role: "admin", email: adminEmail() }, process.env.JWT_SECRET, { expiresIn: "1d" })
+  return jwt.sign({ role: "admin", email: emailLogado }, process.env.JWT_SECRET, { expiresIn: "1d" })
 }
 
 /**
