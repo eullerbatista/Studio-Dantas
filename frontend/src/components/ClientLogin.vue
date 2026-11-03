@@ -1,33 +1,41 @@
 <template>
   <div class="login">
-    <h2>{{ titulos[etapa] }}</h2>
+    <h1>{{ titulos[etapa] }}</h1>
 
     <!-- 1) Telefone: o backend diz se falta cadastro, criar senha ou digitar a senha -->
     <form v-if="etapa === 'telefone'" @submit.prevent="continuar">
-      <input
-        v-model="telefone"
-        type="tel"
-        inputmode="numeric"
-        autocomplete="username"
-        placeholder="Telefone com DDD"
-        required
-        @input="telefone = mascararTelefone(telefone)"
-      />
+      <label class="campo">
+        <span>Telefone com DDD</span>
+        <input
+          v-model="telefone"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="username"
+          placeholder="(11) 98765-4321"
+          required
+          @input="telefone = mascararTelefone(telefone)"
+        />
+      </label>
       <button type="submit" :disabled="enviando">Continuar</button>
     </form>
 
     <!-- 2) Senha -->
     <form v-else-if="etapa === 'senha'" @submit.prevent="entrar">
       <!-- Campo de usuário para o navegador salvar telefone + senha juntos -->
-      <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
-      <input
-        v-model="senha"
-        type="password"
-        autocomplete="current-password"
-        placeholder="Sua senha"
-        required
-        autofocus
-      />
+      <label class="campo">
+        <span>Telefone</span>
+        <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
+      </label>
+      <label class="campo">
+        <span>Senha</span>
+        <input
+          v-model="senha"
+          type="password"
+          autocomplete="current-password"
+          required
+          autofocus
+        />
+      </label>
       <button type="submit" :disabled="enviando">Entrar</button>
       <button type="button" class="voltar" @click="irPara('esqueci')">Esqueci minha senha</button>
       <button type="button" class="voltar" @click="recomecar">Usar outro telefone</button>
@@ -36,33 +44,47 @@
     <!-- 3) Primeira vez deste telefone: cadastro completo -->
     <form v-else-if="etapa === 'cadastro'" @submit.prevent="registrar">
       <p class="info">Não encontramos cadastro para este telefone. Preencha seus dados para criar sua conta.</p>
-      <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
-      <input v-model="nome" type="text" autocomplete="name" placeholder="Seu nome" required />
-      <input
-        v-model="telefoneConfirmacao"
-        type="tel"
-        inputmode="numeric"
-        placeholder="Confirme o telefone"
-        required
-        @input="telefoneConfirmacao = mascararTelefone(telefoneConfirmacao)"
-        @paste.prevent
-      />
-      <input v-model="email" type="email" autocomplete="email" placeholder="Seu e-mail" required />
-      <input
-        v-model="senha"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Crie uma senha (mín. 8 caracteres)"
-        minlength="8"
-        required
-      />
-      <input
-        v-model="senhaConfirmacao"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Confirme a senha"
-        required
-      />
+      <label class="campo">
+        <span>Telefone</span>
+        <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
+      </label>
+      <label class="campo">
+        <span>Nome</span>
+        <input v-model="nome" type="text" autocomplete="name" required />
+      </label>
+      <label class="campo">
+        <span>Confirme o telefone</span>
+        <input
+          v-model="telefoneConfirmacao"
+          type="tel"
+          inputmode="numeric"
+          required
+          @input="telefoneConfirmacao = mascararTelefone(telefoneConfirmacao)"
+        />
+      </label>
+      <label class="campo">
+        <span>E-mail</span>
+        <input v-model="email" type="email" autocomplete="email" required />
+      </label>
+      <label class="campo">
+        <span>Crie uma senha (mín. 8 caracteres)</span>
+        <input
+          v-model="senha"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </label>
+      <label class="campo">
+        <span>Confirme a senha</span>
+        <input
+          v-model="senhaConfirmacao"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
+      </label>
       <button type="submit" :disabled="enviando">Cadastrar</button>
       <button type="button" class="voltar" @click="recomecar">Usar outro telefone</button>
     </form>
@@ -73,23 +95,33 @@
         Para proteger seus agendamentos, o acesso agora é feito com senha. Informe seu e-mail (usado
         caso você esqueça a senha) e crie sua senha.
       </p>
-      <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
-      <input v-model="email" type="email" autocomplete="email" placeholder="Seu e-mail" required />
-      <input
-        v-model="senha"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Crie uma senha (mín. 8 caracteres)"
-        minlength="8"
-        required
-      />
-      <input
-        v-model="senhaConfirmacao"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Confirme a senha"
-        required
-      />
+      <label class="campo">
+        <span>Telefone</span>
+        <input :value="telefone" type="tel" autocomplete="username" readonly class="somente-leitura" />
+      </label>
+      <label class="campo">
+        <span>E-mail</span>
+        <input v-model="email" type="email" autocomplete="email" required />
+      </label>
+      <label class="campo">
+        <span>Crie uma senha (mín. 8 caracteres)</span>
+        <input
+          v-model="senha"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </label>
+      <label class="campo">
+        <span>Confirme a senha</span>
+        <input
+          v-model="senhaConfirmacao"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
+      </label>
       <button type="submit" :disabled="enviando">Salvar e entrar</button>
       <button type="button" class="voltar" @click="recomecar">Usar outro telefone</button>
     </form>
@@ -98,36 +130,43 @@
     <form v-else-if="etapa === 'esqueci'" @submit.prevent="pedirRedefinicao">
       <template v-if="!mensagem">
         <p class="info">Informe o e-mail da sua conta. Enviaremos um link para criar uma nova senha.</p>
-        <input v-model="email" type="email" autocomplete="email" placeholder="Seu e-mail" required />
+        <label class="campo">
+          <span>E-mail</span>
+          <input v-model="email" type="email" autocomplete="email" required />
+        </label>
         <button type="submit" :disabled="enviando">Enviar link</button>
       </template>
-      <p v-else class="sucesso">{{ mensagem }}</p>
+      <p v-else class="sucesso" role="status">{{ mensagem }}</p>
       <button type="button" class="voltar" @click="recomecar">Voltar para o login</button>
     </form>
 
     <!-- 6) Link do e-mail (/redefinir-senha?token=...) -->
     <form v-else-if="etapa === 'redefinir'" @submit.prevent="redefinir">
-      <input
-        v-model="senha"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Nova senha (mín. 8 caracteres)"
-        minlength="8"
-        required
-        autofocus
-      />
-      <input
-        v-model="senhaConfirmacao"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Confirme a nova senha"
-        required
-      />
+      <label class="campo">
+        <span>Nova senha (mín. 8 caracteres)</span>
+        <input
+          v-model="senha"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+          autofocus
+        />
+      </label>
+      <label class="campo">
+        <span>Confirme a nova senha</span>
+        <input
+          v-model="senhaConfirmacao"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
+      </label>
       <button type="submit" :disabled="enviando">Salvar nova senha</button>
       <button type="button" class="voltar" @click="recomecar">Voltar para o login</button>
     </form>
 
-    <p v-if="erro" class="erro">{{ erro }}</p>
+    <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
   </div>
 </template>
 
@@ -294,7 +333,7 @@ function redefinir() {
   border-radius: var(--raio);
   box-shadow: var(--sombra);
 }
-.login h2 {
+.login h1 {
   margin: 0 0 1.25rem;
   font-size: 2rem;
   text-align: center;
@@ -305,16 +344,28 @@ function redefinir() {
   width: 100%;
   margin-bottom: 0.8rem;
   padding: 0.8rem 1rem;
-  border: 1px solid var(--borda);
+  border: 1px solid var(--borda-campo);
   border-radius: 10px;
   background: var(--fundo);
   color: var(--texto);
   transition: border-color 0.2s, background 0.2s;
 }
 .login input:focus {
-  outline: none;
-  border-color: var(--dourado);
+  border-color: var(--dourado-escuro);
   background: var(--branco);
+}
+.campo {
+  display: block;
+  margin-bottom: 0.8rem;
+}
+.campo span {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.campo input {
+  margin-bottom: 0;
 }
 .login input.somente-leitura {
   color: var(--texto-suave);
@@ -327,7 +378,7 @@ function redefinir() {
   border: none;
   border-radius: 999px;
   background: var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -338,6 +389,7 @@ function redefinir() {
 }
 .login button:hover {
   background: var(--dourado-escuro);
+  color: var(--branco);
 }
 .login button:disabled {
   opacity: 0.6;

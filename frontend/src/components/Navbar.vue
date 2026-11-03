@@ -1,12 +1,12 @@
 <template>
-  <nav class="navbar">
+  <nav class="navbar" aria-label="Principal">
     <div class="navbar-left">
       <img :src="logo" alt="Studio Dantas Lash Beauty" class="logo" />
     </div>
 
     <!-- Contatos: sempre visíveis, inclusive no celular -->
     <div class="navbar-social">
-      <a :href="WHATSAPP_URL" target="_blank" rel="noopener" class="social" aria-label="WhatsApp" title="WhatsApp">
+      <a :href="WHATSAPP_URL" target="_blank" rel="noopener" class="social" aria-label="WhatsApp (abre em nova aba)" title="WhatsApp">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
           <path
@@ -16,14 +16,14 @@
           />
         </svg>
       </a>
-      <a :href="INSTAGRAM_URL" target="_blank" rel="noopener" class="social" aria-label="Instagram" title="Instagram">
+      <a :href="INSTAGRAM_URL" target="_blank" rel="noopener" class="social" aria-label="Instagram (abre em nova aba)" title="Instagram">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
           <circle cx="12" cy="12" r="4" />
           <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
         </svg>
       </a>
-      <a :href="MAPS_URL" target="_blank" rel="noopener" class="social" aria-label="Localização no Google Maps" title="Como chegar">
+      <a :href="MAPS_URL" target="_blank" rel="noopener" class="social" aria-label="Localização no Google Maps (abre em nova aba)" title="Como chegar">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
           <circle cx="12" cy="10" r="3" />
@@ -36,16 +36,17 @@
       class="menu-toggle"
       :class="{ aberto: menuAberto }"
       :aria-expanded="menuAberto"
-      aria-label="Abrir menu"
+      aria-controls="menu-principal"
+      aria-label="Menu"
       @click="menuAberto = !menuAberto"
     >
       <span></span><span></span><span></span>
     </button>
 
-    <div class="navbar-links" :class="{ aberto: menuAberto }">
+    <div id="menu-principal" class="navbar-links" :class="{ aberto: menuAberto }">
       <router-link to="/servicos" class="link">Serviços</router-link>
-      <router-link v-if="!isAdmin" to="/agendamentos" class="link">Meus agendamentos</router-link>
-      <router-link v-if="isAdmin" to="/dashboard" class="link">Painel</router-link>
+      <router-link v-if="!isEquipe" to="/agendamentos" class="link">Meus agendamentos</router-link>
+      <router-link v-if="isEquipe" to="/dashboard" class="link">Painel</router-link>
       <router-link v-if="!isAuthenticated" to="/login" class="link">Entrar</router-link>
       <a v-else href="#" class="link" @click.prevent="sair">Sair</a>
     </div>
@@ -55,7 +56,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth.js'
+import { useAuth } from '@/composables/useAuth'
 // Versão do logo.svg com os textos em curvas (não depende das fontes instaladas)
 // e uma só camada dourada: a sombra em 3 camadas embaçava o logo em tamanho pequeno
 import logo from '@/assets/logo-curvas.svg'
@@ -63,7 +64,7 @@ import { INSTAGRAM_URL, MAPS_URL, WHATSAPP_URL } from '@/config/contato'
 
 const route = useRoute()
 const router = useRouter()
-const { isAuthenticated, isAdmin, logout } = useAuth()
+const { isAuthenticated, isEquipe, logout } = useAuth()
 
 const menuAberto = ref(false)
 
@@ -73,7 +74,7 @@ watch(() => route.fullPath, () => {
 })
 
 function sair() {
-  const eraAdmin = isAdmin.value
+  const eraAdmin = isEquipe.value
   menuAberto.value = false
   logout()
   router.push(eraAdmin ? '/admin' : '/')

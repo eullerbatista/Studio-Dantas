@@ -1,7 +1,7 @@
 <template>
   <div class="modal-overlay">
-    <form class="modal" @submit.prevent="salvar">
-      <h2>{{ cliente ? 'Editar cliente' : 'Nova cliente' }}</h2>
+    <form class="modal" ref="modal" role="dialog" aria-modal="true" aria-labelledby="cliente-titulo" tabindex="-1" @submit.prevent="salvar">
+      <h2 id="cliente-titulo">{{ cliente ? 'Editar cliente' : 'Nova cliente' }}</h2>
 
       <label>
         Nome
@@ -47,7 +47,7 @@
         }}
       </p>
 
-      <p v-if="erro" class="erro">{{ erro }}</p>
+      <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
 
       <div class="acoes">
         <button type="button" class="btn-cancelar" @click="emit('fechar')">Cancelar</button>
@@ -61,6 +61,7 @@
 import { reactive, ref } from 'vue'
 import api, { mensagemDeErro } from '@/services/api'
 import { formatarTelefone, mascararTelefone } from '@/utils/telefone'
+import { useDialogo } from '@/composables/useDialogo'
 
 export interface Cliente {
   id: number
@@ -76,6 +77,9 @@ const emit = defineEmits<{
   (e: 'fechar'): void
   (e: 'salvo', cliente: Cliente): void
 }>()
+
+const modal = ref<HTMLElement | null>(null)
+useDialogo(modal, () => emit('fechar'))
 
 const form = reactive({
   nome: props.cliente?.nome ?? '',
@@ -159,10 +163,11 @@ async function salvar() {
 .btn-confirmar {
   background: var(--dourado);
   border: 1px solid var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
 }
 .btn-confirmar:hover {
   background: var(--dourado-escuro);
+  color: var(--branco);
   border-color: var(--dourado-escuro);
 }
 .btn-confirmar:disabled {
@@ -189,7 +194,7 @@ textarea {
   margin-top: 0.35rem;
   width: 100%;
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--borda);
+  border: 1px solid var(--borda-campo);
   border-radius: 10px;
   background: var(--fundo);
   color: var(--texto);
@@ -197,8 +202,7 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: none;
-  border-color: var(--dourado);
+  border-color: var(--dourado-escuro);
   background: var(--branco);
 }
 textarea {

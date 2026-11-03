@@ -33,7 +33,9 @@ function erroDeDuplicado(error) {
 // Admin cadastra uma cliente que agendou pessoalmente. Sem senha, no primeiro
 // login pelo site ela informa o e-mail e cria a senha (needsPasswordSetup)
 export async function criarCliente(req, res) {
-  const { campos, erro } = await lerDadosCliente(req.body)
+  // Funcionária cadastra só nome e telefone; e-mail e senha ficam com a proprietária
+  const body = req.user.role === "admin" ? req.body : { nome: req.body?.nome, telefone: req.body?.telefone }
+  const { campos, erro } = await lerDadosCliente(body)
   if (erro) return res.status(400).json({ error: erro })
 
   const { data, error } = await supabase

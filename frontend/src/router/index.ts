@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminCallback from '../components/AdminCallback.vue'
 import AdminLogin from '../components/AdminLogin.vue'
@@ -12,6 +13,7 @@ import Termos from '../views/Termos.vue'
 declare module 'vue-router' {
   interface RouteMeta {
     requiresClient?: boolean
+    // Painel: proprietária ou funcionária
     requiresAdmin?: boolean
   }
 }
@@ -57,7 +59,7 @@ router.beforeEach((to) => {
   const token = localStorage.getItem('token')
   const role = localStorage.getItem('role')
 
-  if (to.meta.requiresAdmin && (!token || role !== 'admin')) {
+  if (to.meta.requiresAdmin && (!token || (role !== 'admin' && role !== 'profissional'))) {
     return { name: 'AdminLogin' }
   }
 
@@ -67,6 +69,30 @@ router.beforeEach((to) => {
   }
 
   return true
+})
+
+// Título da aba por página (WCAG 2.4.2); ServicosCategoria define o seu com o nome da categoria
+const TITULOS: Record<string, string> = {
+  Servicos: 'Serviços',
+  Agendamentos: 'Meus agendamentos',
+  ClientLogin: 'Entrar',
+  RedefinirSenha: 'Nova senha',
+  AdminLogin: 'Entrar no painel',
+  AdminCallback: 'Entrando',
+  AdminDashboard: 'Painel',
+  Privacidade: 'Política de Privacidade',
+  Termos: 'Termos de Uso',
+}
+
+router.afterEach((to, from) => {
+  const titulo = TITULOS[String(to.name)]
+  document.title = titulo ? `${titulo} · Studio Dantas` : 'Studio Dantas · Lash Beauty'
+
+  // Trocou de página: leva o foco ao conteúdo novo, senão o teclado e o leitor de tela
+  // ficam no link clicado (WCAG 2.4.3). Fora a primeira carga e mudanças só na query
+  if (from.matched.length && to.path !== from.path) {
+    nextTick(() => document.getElementById('conteudo')?.focus({ preventScroll: true }))
+  }
 })
 
 export default router

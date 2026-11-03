@@ -36,24 +36,26 @@ onMounted(fetchAgendamentos)
 
 <template>
   <div class="agendamentos-view">
-    <h2>Meus Agendamentos</h2>
+    <h1>Meus Agendamentos</h1>
     <p v-if="cliente">Olá, {{ cliente.nome }}!</p>
 
-    <div v-if="loading">Carregando agendamentos...</div>
+    <div v-if="loading" role="status">Carregando agendamentos...</div>
     <div v-else-if="agendamentos.length === 0 && !erro">
       Nenhum agendamento encontrado. <router-link to="/servicos">Agendar um serviço</router-link>
     </div>
 
     <ul v-else>
       <li v-for="ag in agendamentos" :key="ag.id">
-        <strong>{{ ag.servicos?.nome }}</strong> - {{ formatDate(ag.data_hora) }}
+        <strong>{{ ag.servicos?.nome }}</strong>
+        <template v-if="ag.profissionais?.nome"> com {{ ag.profissionais.nome }}</template>
+        - {{ formatDate(ag.data_hora) }}
         <span v-if="ag.status === 'cancelado'"> (cancelado)</span>
         <span v-else-if="ag.status === 'confirmado'"> (confirmado)</span>
         <span v-else> (aguardando confirmação)</span>
       </li>
     </ul>
 
-    <p v-if="erro" class="erro">{{ erro }}</p>
+    <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
   </div>
 </template>
 
@@ -67,7 +69,7 @@ onMounted(fetchAgendamentos)
   border-radius: var(--raio);
   box-shadow: var(--sombra);
 }
-.agendamentos-view h2 {
+.agendamentos-view h1 {
   margin: 0 0 1.25rem;
   font-size: 2rem;
   text-align: left;

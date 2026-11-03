@@ -4,6 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "strict": true,
+    // Só confere os tipos: o Vite compila os .ts. Sem isto o vue-tsc gerava .js ao lado
+    // de cada .ts/.vue, e o Vite usava essas cópias velhas no lugar do código atual
+    "noEmit": true,
     "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,

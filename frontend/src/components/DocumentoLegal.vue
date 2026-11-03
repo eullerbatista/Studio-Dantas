@@ -1,7 +1,7 @@
 <template>
   <article class="documento">
     <header>
-      <h2>{{ titulo }}</h2>
+      <h1>{{ titulo }}</h1>
       <p class="atualizacao">Última atualização: {{ atualizadoEm }}</p>
     </header>
     <slot />
@@ -26,7 +26,7 @@ header {
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--borda);
 }
-h2 {
+h1 {
   margin: 0 0 0.35rem;
   font-size: 2.3rem;
 }
@@ -35,7 +35,7 @@ h2 {
   font-size: 0.8rem;
   color: var(--texto-suave);
 }
-.documento :deep(h3) {
+.documento :deep(h2) {
   margin: 1.75rem 0 0.5rem;
   font-size: 1.4rem;
 }
@@ -60,7 +60,7 @@ h2 {
   .documento {
     padding: 1.5rem 1rem 2rem;
   }
-  h2 {
+  h1 {
     font-size: 1.9rem;
   }
 }

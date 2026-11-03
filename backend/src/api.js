@@ -12,12 +12,13 @@ import clientesRouter from "./routes/clientes.js"
 import eventsRouter from "./routes/events.js"
 import servicosRouter from "./routes/servicos.js"
 import syncRouter from "./routes/sync.js"
+import profissionaisRouter from "./routes/profissionais.js"
 
 const app = express()
 
 // Middlewares globais primeiro
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }))
-app.use(express.json())
+app.use(express.json({ limit: "300kb" }))
 
 // Rotas de autenticação
 app.use("/api/auth", authRouter)
@@ -31,6 +32,7 @@ app.use("/api/calendar/events", eventsRouter)
 app.use("/api/agendamentos", agendamentosRouter)
 app.use("/api/servicos", servicosRouter)
 app.use("/api/clientes", clientesRouter)
+app.use("/api/profissionais", profissionaisRouter)
 
 // Rotas admin
 app.get("/api/admin/dashboard", checkRole("admin"), (req, res) => {

@@ -10,11 +10,11 @@ import { checkRole } from "../middleware/auth.js";
 const router = express.Router();
 
 // Cliente se cadastra pelo login (POST /api/auth/client/register);
-// admin cadastra quem agendou pessoalmente
-router.post("/", checkRole("admin"), criarCliente);
+// a equipe cadastra quem agendou pessoalmente
+router.post("/", checkRole("profissional"), criarCliente);
 
-// Listar clientes -> apenas admin
-router.get("/", checkRole("admin"), listarClientes);
+// Listar clientes -> equipe
+router.get("/", checkRole("profissional"), listarClientes);
 
 // Atualizar cliente -> apenas admin
 router.put("/:id", checkRole("admin"), atualizarCliente);

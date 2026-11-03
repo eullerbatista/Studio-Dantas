@@ -20,6 +20,7 @@
             :key="p.chave"
             class="coluna"
             tabindex="0"
+            role="img"
             :aria-label="`${p.rotuloCompleto}: ${formatar(p.valor)}`"
             @mouseenter="ativo = i"
             @mouseleave="ativo = null"
@@ -48,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 export interface PontoGrafico {
   chave: string
@@ -64,6 +65,13 @@ const props = defineProps<{
 }>()
 
 const ativo = ref<number | null>(null)
+
+// Esc esconde a dica aberta pelo mouse ou pelo teclado (WCAG 1.4.13)
+function aoTeclar(e: KeyboardEvent) {
+  if (e.key === 'Escape') ativo.value = null
+}
+onMounted(() => document.addEventListener('keydown', aoTeclar))
+onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
 
 // Arredonda o topo do eixo para 1, 2 ou 5 × 10^n
 const maximo = computed(() => {
@@ -91,7 +99,7 @@ const passoRotulo = computed(() => Math.max(1, Math.ceil(props.pontos.length / 8
 }
 figcaption {
   margin-bottom: 0.75rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -164,9 +172,11 @@ figcaption {
 .barra.destaque {
   background: #86681a;
 }
-.coluna:focus-visible .barra {
+.coluna:focus-visible {
+  /* Na coluna inteira: uma barra de valor 0 não tem altura para mostrar o anel */
   outline: 2px solid var(--texto);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 .tooltip {
   position: absolute;
@@ -207,7 +217,7 @@ figcaption {
   flex: 1;
   min-width: 0;
   overflow: visible;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: var(--texto-suave);
   text-align: center;
   white-space: nowrap;

@@ -6,7 +6,7 @@
       <div class="servico-card" v-for="categoria in categorias" :key="categoria.id">
         <img
           :src="categoria.img"
-          :alt="categoria.nome"
+          alt=""
           class="servico-img"
           :class="{ 'servico-img--menor': categoria.imgMenor }"
         />
@@ -120,7 +120,7 @@ h1::after {
   border: none;
   border-radius: 999px;
   background: var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -131,6 +131,7 @@ h1::after {
 
 .btn-primary:hover {
   background: var(--dourado-escuro);
+  color: var(--branco);
 }
 
 .servico-img {

@@ -1,7 +1,7 @@
 <template>
   <div class="modal-overlay">
-    <form class="modal" @submit.prevent="confirmar">
-      <h2>Novo agendamento</h2>
+    <form class="modal" ref="modal" role="dialog" aria-modal="true" aria-labelledby="novo-agendamento-titulo" tabindex="-1" @submit.prevent="confirmar">
+      <h2 id="novo-agendamento-titulo">Novo agendamento</h2>
 
       <label>
         Cliente
@@ -40,21 +40,34 @@
         </select>
       </label>
 
+      <label v-if="!profissionalFixa">
+        Profissional
+        <select v-model="profissionalId" required :disabled="!servicoId">
+          <option :value="null" disabled>
+            {{ servicoId && !profissionaisDoServico.length ? 'Ninguém realiza este serviço' : 'Selecione a profissional' }}
+          </option>
+          <option v-for="p in profissionaisDoServico" :key="p.id" :value="p.id">{{ p.nome }}</option>
+        </select>
+      </label>
+
       <label>
         Data
         <input v-model="data" type="date" :min="hoje" required />
       </label>
 
-      <p v-if="!servicoId || !data" class="aviso">Escolha o serviço e a data para ver os horários.</p>
-      <p v-else-if="carregando" class="aviso">Carregando horários...</p>
+      <p v-if="!servicoId || !profissionalId || !data" class="aviso">
+        Escolha o serviço, {{ profissionalFixa ? '' : 'a profissional ' }}e a data para ver os horários.
+      </p>
+      <p v-else-if="carregando" class="aviso" role="status">Carregando horários...</p>
       <p v-else-if="fechado" class="aviso">O salão não abre aos domingos e segundas. Escolha outra data.</p>
       <p v-else-if="horariosDisponiveis.length === 0" class="aviso">Nenhum horário livre nesta data.</p>
-      <div class="horarios">
+      <div class="horarios" role="group" aria-label="Horários disponíveis">
         <button
           v-for="hora in horariosDisponiveis"
           :key="hora"
           type="button"
           :class="{ ativo: hora === horario }"
+          :aria-pressed="hora === horario"
           @click="horario = hora"
         >
           {{ hora }}
@@ -66,7 +79,7 @@
         <textarea v-model="observacoes" maxlength="500" placeholder="Opcional" />
       </label>
 
-      <p v-if="erro" class="erro">{{ erro }}</p>
+      <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
 
       <div class="acoes">
         <button type="button" class="btn-cancelar" @click="emit('fechar')">Cancelar</button>
@@ -80,7 +93,9 @@
 import { computed, reactive, ref, watch } from 'vue'
 import api, { mensagemDeErro } from '@/services/api'
 import { formatarTelefone, mascararTelefone } from '@/utils/telefone'
+import { useDialogo } from '@/composables/useDialogo'
 import type { Cliente } from './ClienteModal.vue'
+import type { Profissional } from './ProfissionalModal.vue'
 
 // Valor do <select> que indica cadastro de cliente nova
 const NOVA = 'nova'
@@ -88,6 +103,9 @@ const NOVA = 'nova'
 const props = defineProps<{
   clientes: Cliente[]
   servicos: { id: number; nome: string; ativo?: boolean }[]
+  profissionais: Profissional[]
+  // Funcionária agenda só para ela mesma (id dela); a proprietária escolhe
+  profissionalFixa?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -96,16 +114,36 @@ const emit = defineEmits<{
   (e: 'salvo'): void
 }>()
 
+const modal = ref<HTMLElement | null>(null)
+useDialogo(modal, () => emit('fechar'))
+
 const hoje = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 
 const clientesOrdenadas = computed(() =>
   [...props.clientes].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')),
 )
-const servicosAtivos = computed(() => props.servicos.filter((s) => s.ativo !== false))
+const servicosAtivos = computed(() => {
+  const ativos = props.servicos.filter((s) => s.ativo !== false)
+  if (!props.profissionalFixa) return ativos
+  const meus = props.profissionais.find((p) => p.id === props.profissionalFixa)?.servicos || []
+  return ativos.filter((s) => meus.includes(s.id))
+})
 
 const clienteId = ref<number | typeof NOVA | null>(null)
 const novaCliente = reactive({ nome: '', telefone: '' })
 const servicoId = ref<number | null>(null)
+const profissionalId = ref<number | null>(props.profissionalFixa ?? null)
+const profissionaisDoServico = computed(() =>
+  props.profissionais.filter((p) => servicoId.value && p.servicos.includes(servicoId.value)),
+)
+
+// Trocou o serviço: mantém a profissional só se ela também faz o novo; se só uma faz, já escolhe
+watch(servicoId, () => {
+  if (props.profissionalFixa) return
+  const lista = profissionaisDoServico.value
+  if (!lista.some((p) => p.id === profissionalId.value)) profissionalId.value = null
+  if (!profissionalId.value && lista.length === 1) profissionalId.value = lista[0]!.id
+})
 const data = ref('')
 const horario = ref('')
 const observacoes = ref('')
@@ -119,14 +157,16 @@ async function carregarHorarios() {
   horario.value = ''
   horariosDisponiveis.value = []
   fechado.value = false
-  const [dia, servico] = [data.value, servicoId.value]
-  if (!dia || !servico) return
+  const [dia, servico, profissional] = [data.value, servicoId.value, profissionalId.value]
+  if (!dia || !servico || !profissional) return
 
   carregando.value = true
   try {
-    const res = await api.get('/calendar/availability', { params: { date: dia, servico_id: servico } })
-    // Ignora respostas antigas se ela trocou a data ou o serviço no meio
-    if (dia === data.value && servico === servicoId.value) {
+    const res = await api.get('/calendar/availability', {
+      params: { date: dia, servico_id: servico, profissional_id: profissional },
+    })
+    // Ignora respostas antigas se ela trocou a data, o serviço ou a profissional no meio
+    if (dia === data.value && servico === servicoId.value && profissional === profissionalId.value) {
       horariosDisponiveis.value = res.data.horarios || []
       fechado.value = res.data.fechado === true
     }
@@ -137,7 +177,7 @@ async function carregarHorarios() {
   }
 }
 
-watch([data, servicoId], () => {
+watch([data, servicoId, profissionalId], () => {
   erro.value = ''
   carregarHorarios()
 })
@@ -161,6 +201,7 @@ async function confirmar() {
     await api.post('/agendamentos', {
       cliente_id: clienteId.value,
       servico_id: servicoId.value,
+      profissional_id: profissionalId.value,
       data: data.value,
       horario: horario.value,
       observacoes: observacoes.value || undefined,
@@ -232,10 +273,11 @@ async function confirmar() {
 .btn-confirmar {
   background: var(--dourado);
   border: 1px solid var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
 }
 .btn-confirmar:hover {
   background: var(--dourado-escuro);
+  color: var(--branco);
   border-color: var(--dourado-escuro);
 }
 .btn-confirmar:disabled {
@@ -262,7 +304,7 @@ textarea {
   margin-top: 0.35rem;
   width: 100%;
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--borda);
+  border: 1px solid var(--borda-campo);
   border-radius: 10px;
   background: var(--fundo);
   color: var(--texto);
@@ -270,8 +312,7 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: none;
-  border-color: var(--dourado);
+  border-color: var(--dourado-escuro);
   background: var(--branco);
 }
 textarea {
@@ -311,7 +352,7 @@ textarea {
 .horarios button.ativo {
   background: var(--dourado);
   border-color: var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
 }
 @media (max-width: 480px) {
   .modal {

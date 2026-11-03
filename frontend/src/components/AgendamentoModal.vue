@@ -1,21 +1,41 @@
 <template>
   <div class="modal-overlay">
-    <div class="modal">
-      <h2>{{ servico.nome }}</h2>
-      <p>Escolha data e horário</p>
+    <div class="modal" ref="modal" role="dialog" aria-modal="true" aria-labelledby="agendamento-titulo" tabindex="-1">
+      <h2 id="agendamento-titulo">{{ servico.nome }}</h2>
+      <p>Escolha quem vai atender, a data e o horário</p>
+
+      <!-- Profissional: a cliente escolhe; a funcionária remarca só com ela mesma -->
+      <p v-if="profissionalFixa" class="com-quem">Com {{ profissionalNome }}</p>
+      <label v-else class="campo">
+        Profissional
+        <select v-model="profissionalId" class="input-date" :disabled="carregandoProfissionais">
+          <option :value="null" disabled>
+            {{ carregandoProfissionais ? 'Carregando...' : 'Escolha a profissional' }}
+          </option>
+          <option v-for="p in profissionais" :key="p.id" :value="p.id">{{ p.nome }}</option>
+        </select>
+      </label>
+      <p v-if="!profissionalFixa && !carregandoProfissionais && !profissionais.length" class="erro" role="alert">
+        Nenhuma profissional realiza este serviço no momento.
+      </p>
 
       <!-- Campo de data -->
-      <input type="date" v-model="data" :min="hoje" class="input-date" />
+      <label class="campo">
+        Data
+        <input type="date" v-model="data" :min="hoje" class="input-date" :disabled="!profissionalId" />
+      </label>
 
       <!-- Lista de horários -->
-      <p v-if="carregando">Carregando horários...</p>
+      <p v-if="carregando" role="status">Carregando horários...</p>
       <p v-else-if="data && fechado">O salão não abre aos domingos e segundas. Escolha outra data.</p>
       <p v-else-if="data && horariosDisponiveis.length === 0">Nenhum horário livre nesta data.</p>
-      <div class="horarios">
+      <div class="horarios" role="group" aria-label="Horários disponíveis">
         <button
           v-for="hora in horariosDisponiveis"
+          type="button"
           :key="hora"
           :class="{ ativo: hora === horario }"
+          :aria-pressed="hora === horario"
           @click="horario = hora"
         >
           {{ hora }}
@@ -27,10 +47,11 @@
         v-model="observacoes"
         class="input-obs"
         placeholder="Observações (opcional)"
+        aria-label="Observações (opcional)"
         maxlength="500"
       />
 
-      <p v-if="erro" class="erro">{{ erro }}</p>
+      <p v-if="erro" class="erro" role="alert">{{ erro }}</p>
 
       <!-- Ações -->
       <div class="acoes">
@@ -42,24 +63,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import api, { mensagemDeErro } from '@/services/api'
+import { useDialogo } from '@/composables/useDialogo'
 
 // Props tipados
 const props = withDefaults(
   defineProps<{
     servico: { id: number; nome: string }
-    // 'criar': cliente agenda; 'editar': admin escolhe novo horário e o pai salva
+    // 'criar': cliente agenda; 'editar': a equipe escolhe novo horário e o pai salva
     modo?: 'criar' | 'editar'
+    // Remarcar: profissional atual; fixa quando a funcionária remarca o próprio agendamento
+    profissionalInicial?: number | null
+    profissionalFixa?: boolean
+    profissionalNome?: string
   }>(),
-  { modo: 'criar' },
+  { modo: 'criar', profissionalInicial: null, profissionalFixa: false, profissionalNome: '' },
 )
 
 // Eventos tipados
 const emit = defineEmits<{
   (e: 'fechar'): void
-  (e: 'confirmar', dados: { data: string; horario: string; agendamento?: any }): void
+  (e: 'confirmar', dados: { data: string; horario: string; profissional_id: number; agendamento?: any }): void
 }>()
+
+const modal = ref<HTMLElement | null>(null)
+useDialogo(modal, () => emit('fechar'))
 
 // Data de hoje no fuso do navegador (YYYY-MM-DD)
 const hoje = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
@@ -74,18 +103,46 @@ const carregando = ref(false)
 const enviando = ref(false)
 const erro = ref('')
 
+// Quem realiza este serviço
+const profissionais = ref<{ id: number; nome: string }[]>([])
+const profissionalId = ref<number | null>(props.profissionalInicial)
+const carregandoProfissionais = ref(!props.profissionalFixa)
+
+async function carregarProfissionais() {
+  try {
+    const res = await api.get('/profissionais', { params: { servico_id: props.servico.id } })
+    profissionais.value = res.data
+    // Remarcando com quem não faz mais o serviço: mantém a atual na lista
+    if (props.profissionalInicial && !res.data.some((p: any) => p.id === props.profissionalInicial)) {
+      profissionais.value.unshift({ id: props.profissionalInicial, nome: props.profissionalNome || 'Atual' })
+    }
+    // Só uma faz o serviço: já vem escolhida
+    if (!profissionalId.value && res.data.length === 1) profissionalId.value = res.data[0].id
+  } catch (err) {
+    erro.value = mensagemDeErro(err, 'Erro ao carregar as profissionais')
+  } finally {
+    carregandoProfissionais.value = false
+  }
+}
+
+onMounted(() => {
+  if (!props.profissionalFixa) carregarProfissionais()
+})
+
 async function carregarHorarios(dia: string) {
   horario.value = ''
   horariosDisponiveis.value = []
   fechado.value = false
-  if (!dia) return
+  const profissional = profissionalId.value
+  if (!dia || !profissional) return
 
   carregando.value = true
   try {
     const res = await api.get('/calendar/availability', {
-      params: { date: dia, servico_id: props.servico.id },
+      params: { date: dia, servico_id: props.servico.id, profissional_id: profissional },
     })
-    if (dia === data.value) {
+    // Ignora respostas antigas se ela trocou a data ou a profissional no meio
+    if (dia === data.value && profissional === profissionalId.value) {
       horariosDisponiveis.value = res.data.horarios || []
       fechado.value = res.data.fechado === true
     }
@@ -97,20 +154,25 @@ async function carregarHorarios(dia: string) {
 }
 
 // Carrega horários disponíveis do backend (Google Calendar + agendamentos)
-watch(data, (novaData) => {
+watch([data, profissionalId], () => {
   erro.value = ''
-  carregarHorarios(novaData)
+  carregarHorarios(data.value)
 })
 
 // Função de confirmação
 async function confirmar() {
+  if (!profissionalId.value) {
+    erro.value = 'Escolha a profissional!'
+    return
+  }
   if (!data.value || !horario.value) {
     erro.value = 'Selecione data e horário!'
     return
   }
 
+  const escolha = { data: data.value, horario: horario.value, profissional_id: profissionalId.value }
   if (props.modo === 'editar') {
-    emit('confirmar', { data: data.value, horario: horario.value })
+    emit('confirmar', escolha)
     return
   }
 
@@ -119,11 +181,10 @@ async function confirmar() {
   try {
     const res = await api.post('/agendamentos', {
       servico_id: props.servico.id,
-      data: data.value,
-      horario: horario.value,
+      ...escolha,
       observacoes: observacoes.value || undefined,
     })
-    emit('confirmar', { data: data.value, horario: horario.value, agendamento: res.data })
+    emit('confirmar', { ...escolha, agendamento: res.data })
   } catch (err: any) {
     erro.value = mensagemDeErro(err, 'Erro ao salvar agendamento')
     // Horário foi ocupado por outra pessoa: recarrega a lista
@@ -191,10 +252,11 @@ async function confirmar() {
 .btn-confirmar {
   background: var(--dourado);
   border: 1px solid var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
 }
 .btn-confirmar:hover {
   background: var(--dourado-escuro);
+  color: var(--branco);
   border-color: var(--dourado-escuro);
 }
 .btn-confirmar:disabled {
@@ -219,15 +281,32 @@ async function confirmar() {
   margin-bottom: 1rem;
   width: 100%;
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--borda);
+  border: 1px solid var(--borda-campo);
   border-radius: 10px;
   background: var(--fundo);
   color: var(--texto);
 }
+.campo {
+  display: block;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+.campo .input-date {
+  margin-top: 0.35rem;
+  font-size: 15px;
+}
+.input-date:disabled {
+  opacity: 0.6;
+}
+.modal > p.com-quem {
+  color: var(--texto);
+  font-weight: 600;
+}
 .input-date:focus,
 .input-obs:focus {
-  outline: none;
-  border-color: var(--dourado);
+  border-color: var(--dourado-escuro);
   background: var(--branco);
 }
 .input-obs {
@@ -258,7 +337,7 @@ async function confirmar() {
 .horarios button.ativo {
   background: var(--dourado);
   border-color: var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
 }
 @media (max-width: 480px) {
   .modal {

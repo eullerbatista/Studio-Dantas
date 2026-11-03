@@ -1,9 +1,6 @@
 import axios from 'axios'
-import router from '../router/index.js'
-import { useLoader } from '../composables/useLoader.js'
-import { clearSession } from '../composables/useAuth.js'
-
-const { startLoading, stopLoading } = useLoader()
+import router from '../router'
+import { clearSession } from '../composables/useAuth'
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -20,7 +17,6 @@ export function mensagemDeErro(err: any, padrao = 'Erro inesperado') {
 
 // Interceptor de requisição
 api.interceptors.request.use((config) => {
-  startLoading()
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -30,16 +26,11 @@ api.interceptors.request.use((config) => {
 
 // Interceptor de resposta
 api.interceptors.response.use(
-  (response) => {
-    stopLoading()
-    return response
-  },
+  (response) => response,
   (error) => {
-    stopLoading()
-
     // Token inválido ou expirado: limpa a sessão e volta para o login correto
     if (error.response?.status === 401) {
-      const eraAdmin = localStorage.getItem('role') === 'admin'
+      const eraAdmin = ['admin', 'profissional'].includes(localStorage.getItem('role') || '')
       clearSession()
       const atual = router.currentRoute.value
       if (eraAdmin || atual.path.startsWith('/dashboard')) {

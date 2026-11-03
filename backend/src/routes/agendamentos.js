@@ -12,15 +12,16 @@ const router = express.Router()
 
 /**
  * Regras:
- * - Admin: pode realizar qualquer ação (POST, GET, PUT, DELETE).
+ * - Admin (proprietária): pode realizar qualquer ação em qualquer agendamento.
+ * - Profissional: vê todos, cria para si e altera/exclui só os dela (conferido no controller).
  * - Cliente: pode criar agendamento (POST) e listar os próprios (GET /me).
  */
 
-// Criar agendamento -> clientes autenticados OU admin
-router.post("/", checkRole("client"), criarAgendamento)
+// Criar agendamento -> clientes autenticados ou equipe
+router.post("/", checkRole(["client", "profissional"]), criarAgendamento)
 
-// Listar todos os agendamentos -> apenas admin
-router.get("/", checkRole("admin"), listarAgendamentos)
+// Listar todos os agendamentos -> equipe
+router.get("/", checkRole("profissional"), listarAgendamentos)
 
 // Listar agendamentos do cliente autenticado
 router.get("/me", checkRole("client"), async (req, res) => {
@@ -33,10 +34,8 @@ router.get("/me", checkRole("client"), async (req, res) => {
   }
 })
 
-// Atualizar agendamento -> apenas admin
-router.put("/:id", checkRole("admin"), atualizarAgendamento)
-
-// Deletar agendamento -> apenas admin
-router.delete("/:id", checkRole("admin"), deletarAgendamento)
+// Atualizar e deletar -> equipe (funcionária só os dela)
+router.put("/:id", checkRole("profissional"), atualizarAgendamento)
+router.delete("/:id", checkRole("profissional"), deletarAgendamento)
 
 export default router

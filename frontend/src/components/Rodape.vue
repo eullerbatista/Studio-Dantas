@@ -45,6 +45,6 @@ p {
   margin: 0.15rem 0;
 }
 .academico {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 </style>

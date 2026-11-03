@@ -13,7 +13,7 @@
       agendamentos. O Studio Dantas é o responsável (controlador) pelos dados tratados.
     </p>
 
-    <h3>1. Dados que coletamos</h3>
+    <h2>1. Dados que coletamos</h2>
     <ul>
       <li>
         <strong>Clientes:</strong> nome, número de telefone e e-mail, informados no primeiro acesso, e
@@ -33,7 +33,7 @@
       </li>
     </ul>
 
-    <h3>2. Para que usamos os dados</h3>
+    <h2>2. Para que usamos os dados</h2>
     <ul>
       <li>Identificar você e mostrar os seus agendamentos;</li>
       <li>Enviar o link para criar uma nova senha quando você pedir em "Esqueci minha senha";</li>
@@ -47,7 +47,7 @@
       (art. 7º, IX). Seus dados não são vendidos nem usados para propaganda.
     </p>
 
-    <h3>3. Com quem os dados são compartilhados</h3>
+    <h2>3. Com quem os dados são compartilhados</h2>
     <p>Somente com os serviços necessários para o funcionamento do site:</p>
     <ul>
       <li><strong>Supabase</strong> – banco de dados onde ficam cadastros e agendamentos;</li>
@@ -59,7 +59,7 @@
       <li><strong>Netlify</strong> – hospedagem do site.</li>
     </ul>
 
-    <h3>4. Uso de dados do Google</h3>
+    <h2>4. Uso de dados do Google</h2>
     <p>
       O acesso ao Google é usado apenas pela proprietária do salão: o e-mail confirma que só ela entra
       no painel, e a permissão do Google Agenda serve exclusivamente para criar, atualizar e remover os
@@ -72,20 +72,20 @@
       <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.
     </p>
 
-    <h3>5. Por quanto tempo guardamos</h3>
+    <h2>5. Por quanto tempo guardamos</h2>
     <p>
       Os dados ficam armazenados enquanto você mantiver seu cadastro ou enquanto forem necessários para
       o histórico de atendimentos do salão. Você pode pedir a exclusão a qualquer momento.
     </p>
 
-    <h3>6. Seus direitos</h3>
+    <h2>6. Seus direitos</h2>
     <p>
       Pela LGPD (art. 18), você pode pedir a confirmação e o acesso aos seus dados, a correção de dados
       incompletos ou errados, a exclusão do cadastro e informações sobre o compartilhamento. Para isso,
       fale com o salão pelo <a :href="WHATSAPP_URL" target="_blank" rel="noopener">WhatsApp</a>.
     </p>
 
-    <h3>7. Segurança</h3>
+    <h2>7. Segurança</h2>
     <p>
       O site usa conexão criptografada (HTTPS). O acesso das clientes é protegido por senha, guardada
       apenas de forma criptografada; após várias tentativas erradas o acesso é bloqueado por alguns
@@ -94,7 +94,7 @@
       ficam apenas no servidor, nunca no navegador.
     </p>
 
-    <h3>8. Alterações</h3>
+    <h2>8. Alterações</h2>
     <p>
       Esta política pode ser atualizada. A data da última versão aparece no início da página.
       Consulte também os <router-link to="/termos">Termos de Uso</router-link>.

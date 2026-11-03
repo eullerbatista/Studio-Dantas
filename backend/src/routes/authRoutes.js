@@ -146,11 +146,11 @@ router.post("/client/reset-password", async (req, res) => {
 })
 
 /**
- * Login de admin via Google OAuth
- * Endpoint: GET /api/auth/google
+ * Login do painel via Google OAuth
+ * Endpoint: GET /api/auth/google (proprietária) ou /api/auth/google?equipe=1 (funcionárias)
  */
 router.get("/google", (req, res) => {
-  res.redirect(getAuthUrl())
+  res.redirect(getAuthUrl({ equipe: req.query.equipe === "1" }))
 })
 
 /**

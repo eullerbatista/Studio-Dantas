@@ -3,20 +3,23 @@
     <router-link to="/servicos" class="voltar">← Categorias</router-link>
     <h1>{{ tituloCategoria }}</h1>
 
-    <p v-if="sucesso" class="sucesso">
-      {{ sucesso }} <router-link to="/agendamentos">Ver meus agendamentos</router-link>
-    </p>
+    <!-- Região de status sempre presente, para o leitor de tela anunciar a confirmação (WCAG 4.1.3) -->
+    <div role="status">
+      <p v-if="sucesso" class="sucesso">
+        {{ sucesso }} <router-link to="/agendamentos">Ver meus agendamentos</router-link>
+      </p>
+    </div>
 
-    <p v-if="carregando" class="aviso">Carregando serviços...</p>
-    <p v-else-if="erro" class="erro">{{ erro }}</p>
+    <p v-if="carregando" class="aviso" role="status">Carregando serviços...</p>
+    <p v-else-if="erro" class="erro" role="alert">{{ erro }}</p>
     <div v-else-if="servicos.length > 0" class="servicos-grid">
       <div class="servico-card" v-for="servico in servicos" :key="servico.id">
-        <img v-if="iconeDoServico(servico.nome)" :src="iconeDoServico(servico.nome)" alt="" class="servico-icone" />
+        <img v-if="iconeDoServico(servico)" :src="iconeDoServico(servico)!.url" alt="" class="servico-icone" />
         <h2>{{ servico.nome }}</h2>
         <p v-if="servico.descricao" class="descricao">{{ servico.descricao }}</p>
         <p class="detalhe">
           <span v-if="servico.duracao_minutos">{{ servico.duracao_minutos }} min</span>
-          <span v-if="servico.duracao_minutos && servico.preco" class="separador">·</span>
+          <span v-if="servico.duracao_minutos && servico.preco" class="separador" aria-hidden="true">·</span>
           <span v-if="servico.preco" class="preco">{{ formatarPreco(servico.preco) }}</span>
         </p>
         <button @click="abrirAgendamento(servico)" class="btn-primary">Agendar</button>
@@ -42,6 +45,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AgendamentoModal from '@/components/AgendamentoModal.vue'
 import api, { mensagemDeErro } from '@/services/api'
 import { useAuth } from '@/composables/useAuth'
+import { iconeDoServico } from '@/utils/iconesServicos'
 
 interface Servico {
   id: number
@@ -49,32 +53,11 @@ interface Servico {
   descricao?: string
   duracao_minutos?: number
   preco?: number
+  icone?: string | null
 }
-
-// Ícones de assets/servicos, escolhidos pelo nome do serviço (o primeiro termo que bater vence)
-const ICONES: [string, string][] = [
-  ['alongamento', new URL('@/assets/servicos/alongamento.png', import.meta.url).href],
-  ['spa', new URL('@/assets/servicos/spa-pes.png', import.meta.url).href],
-  ['pedicure', new URL('@/assets/servicos/pedicure.png', import.meta.url).href],
-  ['manicure', new URL('@/assets/servicos/manicure.png', import.meta.url).href],
-  ['gel', new URL('@/assets/servicos/gel.png', import.meta.url).href],
-  ['corte', new URL('@/assets/servicos/corte.svg', import.meta.url).href],
-  ['escova', new URL('@/assets/servicos/escova.svg', import.meta.url).href],
-  ['progressiva', new URL('@/assets/servicos/progressiva.svg', import.meta.url).href],
-  ['selante', new URL('@/assets/servicos/selante.svg', import.meta.url).href],
-  ['tintura', new URL('@/assets/servicos/tintura.svg', import.meta.url).href],
-  ['coloracao', new URL('@/assets/servicos/tintura.svg', import.meta.url).href],
-  ['sobrancelha', new URL('@/assets/servicos/sobrancelha.svg', import.meta.url).href],
-  ['cilios', new URL('@/assets/servicos/cilios.svg', import.meta.url).href],
-]
 
 function formatarPreco(valor: number) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
-function iconeDoServico(nome: string) {
-  const n = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  return ICONES.find(([termo]) => n.includes(termo))?.[1]
 }
 
 const route = useRoute()
@@ -116,6 +99,11 @@ const tituloCategoria = computed(() => {
   }
 })
 
+// Título da aba com o nome da categoria (WCAG 2.4.2)
+watch(tituloCategoria, (titulo) => {
+  document.title = `${titulo} · Studio Dantas`
+}, { immediate: true })
+
 const modalAberto = ref(false)
 const servicoSelecionado = ref<Servico | null>(null)
 
@@ -142,10 +130,11 @@ function retomarAgendamento() {
   if (servico && isClient.value) abrirAgendamento(servico)
 }
 
-function confirmarAgendamento(dados: { data: string; horario: string }) {
+function confirmarAgendamento(dados: { data: string; horario: string; agendamento?: any }) {
   modalAberto.value = false
   const [ano, mes, dia] = dados.data.split('-')
-  sucesso.value = `Agendamento confirmado para ${dia}/${mes}/${ano} às ${dados.horario}!`
+  const comQuem = dados.agendamento?.profissionais?.nome ? ` com ${dados.agendamento.profissionais.nome}` : ''
+  sucesso.value = `Agendamento confirmado para ${dia}/${mes}/${ano} às ${dados.horario}${comQuem}!`
 }
 </script>
 
@@ -227,7 +216,7 @@ h1::after {
   border: none;
   border-radius: 999px;
   background: var(--dourado);
-  color: var(--branco);
+  color: var(--texto);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -238,6 +227,7 @@ h1::after {
 
 .btn-primary:hover {
   background: var(--dourado-escuro);
+  color: var(--branco);
 }
 
 .servico-icone {

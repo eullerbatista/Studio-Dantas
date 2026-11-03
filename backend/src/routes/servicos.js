@@ -12,7 +12,7 @@ import {
 const router = express.Router()
 
 router.get("/", listarServicos)
-router.get("/todos", checkRole("admin"), listarTodosServicos)
+router.get("/todos", checkRole("profissional"), listarTodosServicos)
 router.post("/", checkRole("admin"), criarServico)
 router.put("/:id", checkRole("admin"), atualizarServico)
 router.delete("/:id", checkRole("admin"), desativarServico)

@@ -13,13 +13,13 @@
       Dantas. Os atendimentos, preços e políticas do salão são de responsabilidade do Studio Dantas.
     </p>
 
-    <h3>1. O serviço</h3>
+    <h2>1. O serviço</h2>
     <p>
       O site permite consultar os serviços do salão, ver os horários disponíveis, solicitar
       agendamentos e acompanhar os horários marcados.
     </p>
 
-    <h3>2. Cadastro e acesso</h3>
+    <h2>2. Cadastro e acesso</h2>
     <ul>
       <li>
         O acesso é feito com o seu número de celular e uma senha criada por você. Informe um número e
@@ -36,7 +36,7 @@
       <li>Mantenha seu nome, telefone e e-mail corretos, para que o salão consiga falar com você.</li>
     </ul>
 
-    <h3>3. Agendamentos</h3>
+    <h2>3. Agendamentos</h2>
     <ul>
       <li>
         Todo agendamento feito pelo site fica <strong>pendente</strong> até ser confirmado pelo salão.
@@ -52,27 +52,27 @@
       </li>
     </ul>
 
-    <h3>4. Uso adequado</h3>
+    <h2>4. Uso adequado</h2>
     <p>
       Não é permitido fazer agendamentos falsos, usar o telefone ou a conta de outra pessoa ou tentar
       acessar áreas restritas do sistema. O salão pode excluir cadastros e agendamentos que não respeitem estas
       regras.
     </p>
 
-    <h3>5. Disponibilidade</h3>
+    <h2>5. Disponibilidade</h2>
     <p>
       Por se tratar de um projeto acadêmico hospedado em serviços gratuitos, o site pode passar por
       instabilidades ou ficar temporariamente fora do ar. Em caso de divergência, vale o que for
       combinado diretamente com o salão.
     </p>
 
-    <h3>6. Privacidade</h3>
+    <h2>6. Privacidade</h2>
     <p>
       O tratamento dos seus dados está descrito na
       <router-link to="/privacidade">Política de Privacidade</router-link>.
     </p>
 
-    <h3>7. Alterações</h3>
+    <h2>7. Alterações</h2>
     <p>
       Estes termos podem ser atualizados. A data da última versão aparece no início da página.
     </p>

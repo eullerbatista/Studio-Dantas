@@ -1,5 +1,6 @@
 import { supabase } from "../config/supabase.js"
 import { calendar, CALENDAR_ID, TIMEZONE, zonedTimeToUtc } from "../googleCalendar.js"
+import { acessoRevogado, agendaDe, desconectarAgenda } from "./profissionais.js"
 
 // Horário de funcionamento (no fuso do salão): o serviço precisa terminar até o fechamento
 export const ABERTURA = "08:00"
@@ -40,55 +41,72 @@ export function dataValida(dateStr) {
   return typeof dateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
 }
 
-/**
- * Intervalos ocupados no dia: eventos do Google Calendar (inclusive eventos de dia
- * inteiro, como folgas) e agendamentos do banco (caso algum não esteja no Google).
- */
-async function intervalosOcupados(dateStr, ignorarAgendamentoId = null) {
-  const inicioDia = zonedTimeToUtc(dateStr, "00:00")
-  const fimDia = zonedTimeToUtc(proximoDia(dateStr), "00:00")
-
+async function eventosDoDia(calendar, calendarId, inicioDia, fimDia) {
   const events = await calendar.events.list({
-    calendarId: CALENDAR_ID,
+    calendarId,
     timeMin: inicioDia.toISOString(),
     timeMax: fimDia.toISOString(),
     timeZone: TIMEZONE,
     singleEvents: true,
     maxResults: 250,
   })
+  return (events.data.items || []).filter(e => e.status !== "cancelled")
+}
+
+function intervaloDoEvento(e) {
+  if (e.start?.dateTime) return { start: new Date(e.start.dateTime), end: new Date(e.end.dateTime) }
+  // Evento de dia inteiro bloqueia o(s) dia(s) inteiro(s)
+  return { start: zonedTimeToUtc(e.start.date, "00:00"), end: zonedTimeToUtc(e.end.date, "00:00") }
+}
+
+/**
+ * Intervalos ocupados no dia para uma profissional:
+ * - os agendamentos dela no banco;
+ * - na agenda da proprietária, eventos de dia inteiro (folga, feriado) fecham para todas
+ *   e os demais compromissos bloqueiam só a proprietária;
+ * - na Agenda Google da própria funcionária (se conectada), qualquer compromisso dela.
+ * Eventos criados pelo site são ignorados no Google: já contam pelo banco.
+ */
+async function intervalosOcupados(dateStr, profissional, ignorarAgendamentoId = null) {
+  const inicioDia = zonedTimeToUtc(dateStr, "00:00")
+  const fimDia = zonedTimeToUtc(proximoDia(dateStr), "00:00")
 
   const { data: agendamentos, error } = await supabase
     .from("agendamentos")
-    .select("id, data_hora, status, google_event_id, servicos(duracao_minutos)")
+    .select("id, data_hora, status, google_event_id, profissional_id, servicos(duracao_minutos)")
     .gte("data_hora", inicioDia.toISOString())
     .lt("data_hora", fimDia.toISOString())
 
   if (error) throw error
 
   const ocupados = []
-  let ignorarEventId = null
+  const eventosDoSite = new Set()
 
   for (const ag of agendamentos) {
-    if (ag.id === ignorarAgendamentoId) {
-      ignorarEventId = ag.google_event_id
-      continue
-    }
+    if (ag.google_event_id) eventosDoSite.add(ag.google_event_id)
+    if (ag.id === ignorarAgendamentoId) continue
     if (STATUS_QUE_NAO_OCUPAM.includes(ag.status)) continue
+    if (ag.profissional_id !== profissional.id) continue
     const start = new Date(ag.data_hora)
     const minutos = ag.servicos?.duracao_minutos || DURACAO_PADRAO_MINUTOS
     ocupados.push({ start, end: new Date(start.getTime() + minutos * 60000) })
   }
 
-  for (const e of events.data.items || []) {
-    if (e.status === "cancelled" || e.id === ignorarEventId) continue
-    if (e.start?.dateTime) {
-      ocupados.push({ start: new Date(e.start.dateTime), end: new Date(e.end.dateTime) })
-    } else if (e.start?.date) {
-      // Evento de dia inteiro bloqueia o(s) dia(s) inteiro(s)
-      ocupados.push({
-        start: zonedTimeToUtc(e.start.date, "00:00"),
-        end: zonedTimeToUtc(e.end.date, "00:00"),
-      })
+  for (const e of await eventosDoDia(calendar, CALENDAR_ID, inicioDia, fimDia)) {
+    if (eventosDoSite.has(e.id)) continue
+    if (e.start?.date || profissional.proprietaria) ocupados.push(intervaloDoEvento(e))
+  }
+
+  const agenda = agendaDe(profissional)
+  if (!profissional.proprietaria && agenda.propria) {
+    try {
+      for (const e of await eventosDoDia(agenda.calendar, agenda.calendarId, inicioDia, fimDia)) {
+        if (!eventosDoSite.has(e.id)) ocupados.push(intervaloDoEvento(e))
+      }
+    } catch (err) {
+      // Sem acesso à agenda dela: segue só com o banco e a agenda da proprietária
+      if (acessoRevogado(err)) await desconectarAgenda(profissional)
+      else console.error(`Erro ao ler a agenda de ${profissional.nome}:`, err.message)
     }
   }
 
@@ -96,12 +114,12 @@ async function intervalosOcupados(dateStr, ignorarAgendamentoId = null) {
 }
 
 /**
- * Lista os horários livres de um dia para um serviço com a duração informada.
+ * Lista os horários livres de uma profissional num dia, para um serviço com a duração informada.
  */
-export async function horariosDisponiveis(dateStr, duracaoMinutos, ignorarAgendamentoId = null) {
+export async function horariosDisponiveis(dateStr, duracaoMinutos, profissional, ignorarAgendamentoId = null) {
   if (diaFechado(dateStr)) return []
 
-  const ocupados = await intervalosOcupados(dateStr, ignorarAgendamentoId)
+  const ocupados = await intervalosOcupados(dateStr, profissional, ignorarAgendamentoId)
   const agora = new Date()
 
   return HORARIOS.filter(hora => {

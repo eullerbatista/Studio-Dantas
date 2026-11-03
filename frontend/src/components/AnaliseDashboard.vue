@@ -26,6 +26,13 @@
         </select>
       </label>
       <label>
+        Profissional
+        <select v-model="profissionalId">
+          <option value="">Todas</option>
+          <option v-for="p in profissionais" :key="p.id" :value="String(p.id)">{{ p.nome }}</option>
+        </select>
+      </label>
+      <label>
         Status
         <select v-model="filtroStatus">
           <option value="confirmado">Somente confirmados</option>
@@ -95,6 +102,35 @@
       </tfoot>
     </table>
 
+    <!-- Resultado de cada profissional (só quando não há profissional filtrada) -->
+    <template v-if="!profissionalId && rankingProfissionais.length">
+      <h3>Profissionais no período</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Profissional</th>
+            <th class="num">Serviços</th>
+            <th class="num">Faturamento</th>
+            <th class="num">Ticket médio</th>
+            <th class="num">Participação</th>
+            <th><span class="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in rankingProfissionais" :key="r.chave">
+            <td data-label="Profissional">{{ r.nome }}</td>
+            <td data-label="Serviços" class="num">{{ r.servicos }}</td>
+            <td data-label="Faturamento" class="num">{{ moeda(r.faturamento) }}</td>
+            <td data-label="Ticket médio" class="num">{{ moeda(r.faturamento / r.servicos) }}</td>
+            <td data-label="Participação" class="num">{{ percentual(r.faturamento) }}</td>
+            <td class="acoes">
+              <button v-if="r.id" :aria-label="`Ver só ${r.nome}`" @click="profissionalId = String(r.id)">Ver só ela</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
+
     <!-- Ranking de clientes (só quando não há cliente filtrada) -->
     <template v-if="!clienteId && rankingClientes.length">
       <h3>Clientes no período</h3>
@@ -104,7 +140,7 @@
             <th>Cliente</th>
             <th class="num">Serviços</th>
             <th class="num">Faturamento</th>
-            <th></th>
+            <th><span class="sr-only">Ações</span></th>
           </tr>
         </thead>
         <tbody>
@@ -112,7 +148,7 @@
             <td data-label="Cliente">{{ r.nome }}</td>
             <td data-label="Serviços" class="num">{{ r.servicos }}</td>
             <td data-label="Faturamento" class="num">{{ moeda(r.faturamento) }}</td>
-            <td class="acoes"><button @click="clienteId = String(r.id)">Ver só ela</button></td>
+            <td class="acoes"><button :aria-label="`Ver só ${r.nome}`" @click="clienteId = String(r.id)">Ver só ela</button></td>
           </tr>
         </tbody>
       </table>
@@ -131,10 +167,14 @@ import { formatarTelefone } from '../utils/telefone'
 
 type Agrupamento = 'dia' | 'semana' | 'mes'
 
-const props = defineProps<{
-  agendamentos: any[]
-  clientes: any[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    agendamentos: any[]
+    clientes: any[]
+    profissionais?: { id: number; nome: string }[]
+  }>(),
+  { profissionais: () => [] },
+)
 
 const TZ = 'America/Sao_Paulo'
 const NOMES_AGRUPAMENTO: Record<Agrupamento, string> = { dia: 'dia', semana: 'semana', mes: 'mês' }
@@ -184,6 +224,7 @@ const agrupamento = ref<Agrupamento>('mes')
 const de = ref(`${chavePeriodo(somarDias(hoje, -150), 'mes')}-01`)
 const ate = ref(hoje)
 const clienteId = ref('')
+const profissionalId = ref('')
 const filtroStatus = ref<'confirmado' | 'ativos'>('confirmado')
 
 const clientesOrdenadas = computed(() =>
@@ -201,6 +242,7 @@ const filtrados = computed(() =>
       if (ag.status === 'cancelado') return false
       if (filtroStatus.value === 'confirmado' && ag.status !== 'confirmado') return false
       if (clienteId.value && String(ag.cliente_id) !== clienteId.value) return false
+      if (profissionalId.value && String(ag.profissional_id) !== profissionalId.value) return false
       const dia = diaLocal(ag.data_hora)
       return (!de.value || dia >= de.value) && (!ate.value || dia <= ate.value)
     })
@@ -256,6 +298,30 @@ const rankingClientes = computed(() => {
   return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento || b.servicos - a.servicos)
 })
 
+// Serviços e faturamento de cada profissional no período (inclui quem já saiu da equipe)
+const rankingProfissionais = computed(() => {
+  const mapa = new Map<string, { chave: string; id: any; nome: string; servicos: number; faturamento: number }>()
+  for (const ag of filtrados.value) {
+    const chave = String(ag.profissional_id ?? 'sem')
+    const r = mapa.get(chave) ?? {
+      chave,
+      id: ag.profissional_id,
+      nome: ag.profissionais?.nome || 'Sem profissional',
+      servicos: 0,
+      faturamento: 0,
+    }
+    r.servicos += 1
+    r.faturamento += valor(ag)
+    mapa.set(chave, r)
+  }
+  return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento || b.servicos - a.servicos)
+})
+
+function percentual(v: number) {
+  const total = totalFaturamento.value
+  return (total ? v / total : 0).toLocaleString('pt-BR', { style: 'percent', maximumFractionDigits: 1 })
+}
+
 function moeda(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
@@ -284,7 +350,10 @@ function sufixoArquivo() {
   const cliente = clienteId.value
     ? '_' + (props.clientes.find((c) => String(c.id) === clienteId.value)?.nome || 'cliente').replace(/\s+/g, '-')
     : ''
-  return `${de.value}_a_${ate.value}${cliente}.csv`
+  const profissional = profissionalId.value
+    ? '_' + (props.profissionais.find((p) => String(p.id) === profissionalId.value)?.nome || 'profissional').replace(/\s+/g, '-')
+    : ''
+  return `${de.value}_a_${ate.value}${cliente}${profissional}.csv`
 }
 
 function baixarResumo() {
@@ -292,12 +361,20 @@ function baixarResumo() {
     ['Período', 'Serviços', 'Faturamento (R$)'],
     ...linhas.value.map((l) => [l.rotuloCompleto, String(l.servicos), l.faturamento]),
     ['Total', String(filtrados.value.length), totalFaturamento.value],
+    // Sem profissional filtrada, o resumo também separa por profissional
+    ...(profissionalId.value
+      ? []
+      : [
+          [],
+          ['Profissional', 'Serviços', 'Faturamento (R$)'],
+          ...rankingProfissionais.value.map((r) => [r.nome, String(r.servicos), r.faturamento]),
+        ]),
   ])
 }
 
 function baixarDetalhada() {
   baixarCsv(`agendamentos_${sufixoArquivo()}`, [
-    ['Data', 'Horário', 'Cliente', 'Telefone', 'Serviço', 'Status', 'Valor (R$)'],
+    ['Data', 'Horário', 'Cliente', 'Telefone', 'Serviço', 'Profissional', 'Status', 'Valor (R$)'],
     ...filtrados.value.map((ag) => {
       const d = new Date(ag.data_hora)
       return [
@@ -306,6 +383,7 @@ function baixarDetalhada() {
         ag.clientes?.nome || '',
         formatarTelefone(ag.clientes?.telefone),
         ag.servicos?.nome || '',
+        ag.profissionais?.nome || '',
         ag.status,
         valor(ag),
       ]
@@ -335,7 +413,7 @@ function baixarDetalhada() {
 .filtros input {
   min-width: 150px;
   padding: 0.45rem 0.7rem;
-  border: 1px solid var(--borda);
+  border: 1px solid var(--borda-campo);
   border-radius: 10px;
   background: var(--branco);
   color: var(--texto);
@@ -425,7 +503,7 @@ td {
   border-bottom: 1px solid var(--borda);
 }
 th {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -515,7 +593,7 @@ td.acoes {
   }
   td::before {
     content: attr(data-label);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;

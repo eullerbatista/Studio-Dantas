@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import { supabase } from "../config/supabase.js"
 import { enviarLinkRedefinicao } from "../email.js"
 import { createOAuthClient, setCalendarRefreshToken } from "../googleCalendar.js"
+import { garantirProprietaria } from "../services/profissionais.js"
 
 const scrypt = promisify(scryptCallback)
 
@@ -12,6 +13,13 @@ const GOOGLE_SCOPES = [
   "email",
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/gmail.send", // e-mail de "esqueci minha senha"
+]
+
+// Funcionárias: só os eventos da própria agenda (onde ficam os agendamentos delas)
+const GOOGLE_SCOPES_EQUIPE = [
+  "openid",
+  "email",
+  "https://www.googleapis.com/auth/calendar.events",
 ]
 
 function adminEmail() {
@@ -26,16 +34,16 @@ function adminsExtras() {
     .filter(Boolean)
 }
 
-// Gera URL de login do Google (apenas para admin)
-export function getAuthUrl() {
+// Gera URL de login do Google: proprietária (Agenda e Gmail) ou equipe (só a própria agenda)
+export function getAuthUrl({ equipe = false } = {}) {
   // "state" assinado protege o callback contra requisições forjadas
-  const state = jwt.sign({ purpose: "google-oauth" }, process.env.JWT_SECRET, { expiresIn: "10m" })
+  const state = jwt.sign({ purpose: "google-oauth", equipe }, process.env.JWT_SECRET, { expiresIn: "10m" })
 
   return createOAuthClient().generateAuthUrl({
     access_type: "offline", // garante refresh_token
     prompt: "consent",      // força o Google a enviar refresh_token
-    scope: GOOGLE_SCOPES,
-    login_hint: adminEmail() || undefined,
+    scope: equipe ? GOOGLE_SCOPES_EQUIPE : GOOGLE_SCOPES,
+    login_hint: equipe ? undefined : adminEmail() || undefined,
     state,
   })
 }
@@ -66,14 +74,29 @@ async function salvarRefreshToken(refreshToken) {
   if (error) console.error("Erro ao salvar refresh token da admin:", error.message)
 }
 
+async function buscarFuncionariaPorEmail(email) {
+  const { data, error } = await supabase
+    .from("profissionais")
+    .select("id, nome")
+    .ilike("email", email)
+    .eq("ativo", true)
+    .eq("proprietaria", false)
+    .limit(1)
+  if (error) throw error
+  return data[0] || null
+}
+
 /**
- * Troca o código do Google por tokens, confirma que quem entrou é a proprietária
- * (ADMIN_EMAIL) ou uma admin extra (ADMIN_EMAILS_EXTRAS) e devolve o JWT de admin.
+ * Troca o código do Google por tokens e devolve o JWT do painel:
+ * - proprietária (ADMIN_EMAIL) e admins extras (ADMIN_EMAILS_EXTRAS): "admin", acesso a tudo;
+ * - funcionária cadastrada pela proprietária: "profissional", e a agenda dela fica conectada.
  */
 export async function loginAdmin(code, state) {
+  let equipe
   try {
     const decoded = jwt.verify(state || "", process.env.JWT_SECRET)
     if (decoded.purpose !== "google-oauth") throw new Error()
+    equipe = decoded.equipe === true
   } catch {
     throw new AuthError("Sessão de login inválida ou expirada. Tente novamente.", 400)
   }
@@ -91,20 +114,37 @@ export async function loginAdmin(code, state) {
   })
   const { email, email_verified } = ticket.getPayload()
   const emailLogado = email.toLowerCase()
-  const proprietaria = emailLogado === adminEmail()
+  const semAcesso = new AuthError("Esta conta Google não tem acesso ao painel")
+  if (!email_verified) throw semAcesso
 
-  if (!email_verified || (!proprietaria && !adminsExtras().includes(emailLogado))) {
-    throw new AuthError("Esta conta Google não tem acesso ao painel")
+  if (emailLogado === adminEmail()) {
+    // A Agenda e o Gmail dela são os do studio; pelo login da equipe falta a permissão do Gmail
+    if (!equipe && tokens.refresh_token) {
+      setCalendarRefreshToken(tokens.refresh_token)
+      await salvarRefreshToken(tokens.refresh_token)
+    }
+    const dona = await garantirProprietaria()
+    const payload = { role: "admin", email: emailLogado, profissional_id: dona.id, nome: dona.nome }
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1d" })
   }
 
-  // Só o token da proprietária é guardado: é a Agenda e o Gmail dela que o sistema usa
-  if (proprietaria && tokens.refresh_token) {
-    setCalendarRefreshToken(tokens.refresh_token)
-
-    await salvarRefreshToken(tokens.refresh_token)
+  if (adminsExtras().includes(emailLogado)) {
+    return jwt.sign({ role: "admin", email: emailLogado }, process.env.JWT_SECRET, { expiresIn: "1d" })
   }
 
-  return jwt.sign({ role: "admin", email: emailLogado }, process.env.JWT_SECRET, { expiresIn: "1d" })
+  const funcionaria = await buscarFuncionariaPorEmail(emailLogado)
+  if (!funcionaria) throw semAcesso
+
+  if (tokens.refresh_token) {
+    const { error } = await supabase
+      .from("profissionais")
+      .update({ google_refresh_token: tokens.refresh_token })
+      .eq("id", funcionaria.id)
+    if (error) console.error("Erro ao conectar a agenda da profissional:", error.message)
+  }
+
+  const payload = { role: "profissional", email: emailLogado, profissional_id: funcionaria.id, nome: funcionaria.nome }
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1d" })
 }
 
 /**
@@ -355,8 +395,22 @@ async function sessaoDeClienteValida(decoded) {
   return !!data[0] && data[0].sessao_versao === decoded.v
 }
 
-// Middleware para verificar role específico (admin sempre tem acesso)
+// Funcionária removida da equipe perde o acesso na hora
+async function sessaoDeProfissionalValida(decoded) {
+  const { data, error } = await supabase
+    .from("profissionais")
+    .select("ativo")
+    .eq("id", decoded.profissional_id)
+    .limit(1)
+
+  if (error) throw error
+  return !!data[0]?.ativo
+}
+
+// Middleware para verificar role (um ou uma lista); admin sempre tem acesso
 export function checkRole(role) {
+  const roles = Array.isArray(role) ? role : [role]
+
   return async (req, res, next) => {
     let decoded
     try {
@@ -372,7 +426,11 @@ export function checkRole(role) {
       return res.status(401).json({ error: "Sessão expirada. Entre novamente." })
     }
 
-    if (decoded.role === "admin" || decoded.role === role) {
+    if (decoded.role === "profissional" && !(await sessaoDeProfissionalValida(decoded))) {
+      return res.status(401).json({ error: "Seu acesso ao painel foi removido" })
+    }
+
+    if (decoded.role === "admin" || roles.includes(decoded.role)) {
       req.user = decoded
       return next()
     }
